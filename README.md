@@ -22,7 +22,9 @@
 * Something else: Contact Oskar.
 
 ## ToDo:
-* Add Assets Export
-* Add Asset/Entries Import
-* Add Optional Publishing and Workflow Stage Setting on Import
-* Allow exporting Environments without having the delivery token defined
+* Add Automatic Unit Testing and Mocking.
+* Add Assets Export.
+* Add Asset/Entries Import.
+* Add Optional Publishing and Workflow Stage Setting on Import.
+* Allow exporting Environments without having the delivery token defined.
+* Any ideas: Contact Oskar.
