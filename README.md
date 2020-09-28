@@ -27,4 +27,5 @@
 * Add Asset/Entries Import.
 * Add Optional Publishing and Workflow Stage Setting on Import.
 * Allow exporting Environments without having the delivery token defined.
+* Refactor.
 * Any ideas: Contact Oskar.
