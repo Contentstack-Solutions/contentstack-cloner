@@ -1,6 +1,9 @@
 '''
 oskar.eiriksson@contentstack.com
 2020-09-28
+
+Exports content to a local folder
+
 '''
 import inquirer
 import config

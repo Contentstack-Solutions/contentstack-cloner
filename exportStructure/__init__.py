@@ -2,7 +2,7 @@
 oskar.eiriksson@contentstack.com
 2020-08-13
 
-Exports stack structure to local folder. Run this before importing. Uses environmental variables.
+Exports stack structure to local folder..
 
 See Readme for details.
 '''

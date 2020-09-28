@@ -1,6 +1,6 @@
 '''
 oskar.eiriksson@contentstack.com
-2020-08-17
+2020-09-28
 
 Various config functions and variables user in both export and import scripts
 '''
