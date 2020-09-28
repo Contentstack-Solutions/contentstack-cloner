@@ -28,4 +28,5 @@
 * Add Optional Publishing and Workflow Stage Setting on Import.
 * Allow exporting Environments without having the delivery token defined.
 * Refactor.
+* Make an application, e.g. https://realpython.com/python-application-layouts/
 * Any ideas: Contact Oskar.
