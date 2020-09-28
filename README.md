@@ -17,5 +17,12 @@
 ## Current Limitations:
 * Does not export assets when this is written.
 * Does only import stack structure at this point.
-* If you don't have a delivery token defined for environment, it is only possible to export all entries (not using the delivery token)
-* Something else: Contact Oskar
+* If you don't have a delivery token defined for environment, it is only possible to export all entries (not using the delivery token).
+* Circular dependencies (references) in content model breaks content model import.
+* Something else: Contact Oskar.
+
+## ToDo:
+* Add Assets Export
+* Add Asset/Entries Import
+* Add Optional Publishing and Workflow Stage Setting on Import
+* Allow exporting Environments without having the delivery token defined
