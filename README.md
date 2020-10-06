@@ -16,12 +16,14 @@
 
 ## Current Limitations:
 * Circular dependencies (references) in content model breaks content model import.
+* Entry Import still buggy.
 * Content Revision's are not exported/imported. Only newest versions, or what is currently published is exported.
 * Because only a single version of entries and assets is exported it is not possible to publish separate versions when imported (Like is possible between environments).
 * Something else? Contact Oskar.
 
 ## ToDo:
 * Add Automatic Unit Testing and Mocking.
+* Fix circular dependencies.
 * Add Optional Publishing and Workflow Stage Setting on Import.
 * Refactor.
 * Make an application, e.g. https://realpython.com/python-application-layouts/
