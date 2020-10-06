@@ -1,6 +1,10 @@
+.DS_Store
+testEntryWithAssets/
+.tmp/
+authtoken.json
 *.env
-content/
-exportLogin.json
+data/
+exportLogin*
 *.out
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -7,7 +7,7 @@ Imports stack structure from chosen local folder.
 See Readme for details.
 '''
 import os
-from time import sleep
+from time import sleep, time
 import ast
 import inquirer
 from nested_lookup import nested_lookup
@@ -30,22 +30,24 @@ def replaceFromMapper(mapper, exportedJson, msg=''):
     --> Extensions get a new uid when created on a new stack
     '''
     exportString = str(exportedJson)
-    cma.logging.info('Running mapper on {} export'.format(msg))
+    config.logging.info('Running mapper on {} export'.format(msg))
     for key, value in mapper.items():
         exportString = exportString.replace(key, value)
     importedDict = ast.literal_eval(exportString)
-    cma.logging.info('Finished running mapper on {} export'.format(msg))
+    config.logging.info('Finished running mapper on {} export'.format(msg))
     return importedDict
 
 def createMapperFile(apiKey, folder, mapDict, mapperName=''):
     '''
     Reusable function that creates the mapper file between exported and imported uids
     '''
-    cma.logging.info('Writing {} mapper to file'.format(mapperName))
-    mapperFolder = config.localFolder + '/' + config.mapperFolder + '/' + apiKey + '_' + folder
-    config.checkDir(config.mapperFolder)
-    config.checkDir(config.mapperFolder + '/' + apiKey + '_' + folder)
-    config.writeToJsonFile(mapDict, mapperFolder + '/' + config.fileNames[mapperName])
+    config.logging.info('Writing {} mapper to file'.format(mapperName))
+    mapperFolder = config.dataRootFolder + config.stackRootFolder + config.mapperFolder + 'MAPPER_ImportTo-' + apiKey + '_ExportFrom-' + folder
+    config.checkDir(config.dataRootFolder)
+    config.checkDir(config.dataRootFolder + config.stackRootFolder)
+    config.checkDir(config.dataRootFolder + config.stackRootFolder + config.mapperFolder)
+    config.checkDir(mapperFolder)
+    config.writeToJsonFile(mapDict, mapperFolder + '/' + config.fileNames[mapperName], True) # True -> Overwrite
     return mapDict
 
 def addToMapper(mapDict, exportedUid, importedUid):
@@ -76,110 +78,66 @@ def createNewStack(authToken, orgUid, region):
     body['stack']['description'] = stackDescription
     body['stack']['master_locale'] = stackMasterLocale
     stack = cma.createStack(authToken, orgUid, region, body)
-    cma.logging.info('{}{} should have been created{}'.format(config.BOLD, stackName, config.END))
-    return stackName, stack
+    if stack:
+        return stackName, stack
+    config.logging.error('{}Exiting. Stack {} not created.{}'.format(config.RED, stackName, config.END))
+    return None
 
 def importLanguages(apiKey, authToken, region, folder, masterLocale):
     '''
     Imports languages
     '''
-    cma.logging.info('{}Importing languages{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['languages']
-    languages = config.readFromJsonFile(f)
-    if languages:
-        for locale in languages['locales']:
-            body = {
-                'locale': {
-                    'code': locale['code'],
-                    'fallback_locale': locale['fallback_locale'],
-                    'name': locale['name']
-                }
-            }
+    config.logging.info('{}Importing languages{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['languages']
+    for langFile in os.listdir(f):
+        language = config.readFromJsonFile(f + langFile)
+        if language:
             languageImport = None
-            if masterLocale != locale['code']: # Lets just skip trying to import the master language - it has already been created
+            if masterLocale != language['code']:
+                body = {
+                    'locale': {
+                        'code': language['code'],
+                        'fallback_locale': language['fallback_locale'],
+                        'name': language['name']
+                        }
+                    }
                 languageImport = cma.createLanguage(apiKey, authToken, body, region)
-            if languageImport:
-                cma.logging.info('{} imported'.format(locale['code']))
-        return True
-    cma.logging.error('{}Unable to read from JSON{}'.format(config.YELLOW, config.END))
-    return False
+                if languageImport:
+                    config.logging.info('Language {} imported'.format(language['code']))
+        else:
+            config.logging.error('{}Unable to read from Language file {}{}'.format(config.RED, langFile, config.END))
+    return True
 
 def importEnvironments(apiKey, authToken, region, folder):
     '''
     Importing environments
     '''
-    cma.logging.info('{}Importing environments{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['environments']
-    environments = config.readFromJsonFile(f)
-    if environments:
-        mapDict = {}
-        for environment in environments['environments']:
+    config.logging.info('{}Importing environments{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['environments']
+    mapDict = {}
+    for envFile in os.listdir(f):
+        environment = config.readFromJsonFile(f + envFile)
+        if environment:
             body = {
                 'environment': environment
             }
             environmentImport = cma.createEnvironment(apiKey, authToken, body, region)
             if environmentImport:
-                cma.logging.info('{} imported'.format(environment['name']))
+                config.logging.info('Environment {} imported'.format(environment['name']))
                 mapDict = addToMapper(mapDict, environment['uid'], environmentImport['environment']['uid'])
-        return createMapperFile(apiKey, folder, mapDict, 'environments')
-    cma.logging.error('{}Unable to read from JSON{}'.format(config.RED, config.END))
-    return False
-
-def importGlobalFields(apiKey, authToken, region, folder, extensionsMapper):
-    '''
-    Importing global fields
-    '''
-    uidArr = []
-    cma.logging.info('{}Importing global fields{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['globalFields']
-    globalFields = config.readFromJsonFile(f)
-    if globalFields:
-        # Replace the uid of extension from export stack with the uid from the import stack
-        globalFields = replaceFromMapper(extensionsMapper, globalFields, 'global fields')
-        for globalField in globalFields['global_fields']:
-            body = {
-                'global_field': globalField
-            }
-            globalFieldImport = cma.createGlobalField(apiKey, authToken, body, region)
-            if globalFieldImport:
-                cma.logging.info('{} imported'.format(globalField['title']))
-                uidArr.append(globalField['uid'])
-        return uidArr
-    cma.logging.error('{}Unable to read from JSON{}'.format(config.RED, config.END))
-    return uidArr
-
-def importExtensions(apiKey, authToken, region, folder):
-    '''
-    Importing extensions
-    '''
-    cma.logging.info('{}Importing extensions{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['extensions']
-    extensions = config.readFromJsonFile(f)
-    if extensions:
-        mapDict = {}
-        for extension in extensions['extensions']:
-            body = {
-                'extension': extension
-            }
-            extensionImport = cma.createExtension(apiKey, authToken, body, region)
-            if extensionImport:
-                cma.logging.info('{} imported'.format(extension['title']))
-                mapDict = addToMapper(mapDict, extension['uid'], extensionImport['extension']['uid'])
-        return createMapperFile(apiKey, folder, mapDict, 'extensions')
-    cma.logging.error('{}Unable to read from JSON{}'.format(config.RED, config.END))
-    return False
+        else:
+            config.logging.error('{}Unable to read from Environments file {}{}'.format(config.RED, envFile, config.END))
+    return createMapperFile(apiKey, folder, mapDict, 'environments')
 
 def importDeliveryTokens(apiKey, authToken, region, folder):
     '''
     Importing delivery tokens
     '''
-    cma.logging.info('{}Importing delivery tokens{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['deliveryTokens']
-    deliveryTokens = config.readFromJsonFile(f)
-    if deliveryTokens:
-        # Replace the uid of extension from export stack with the uid from the import stack
-        # deliveryTokens = replaceFromMapper(environmentsMapper, deliveryTokens, 'delivery tokens')
-        for deliveryToken in deliveryTokens['tokens']:
+    config.logging.info('{}Importing delivery tokens{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['deliveryTokens']
+    for delFile in os.listdir(f):
+        deliveryToken = config.readFromJsonFile(f + delFile)
+        if deliveryToken:
             body = {
                 'token': {
                     'name': deliveryToken['name'],
@@ -193,11 +151,53 @@ def importDeliveryTokens(apiKey, authToken, region, folder):
             }
             deliveryTokenImport = cma.createDeliveryToken(apiKey, authToken, body, region)
             if deliveryTokenImport:
-                cma.logging.info('{} imported'.format(deliveryToken['name']))
-        return True
-    cma.logging.error('{}Unable to read from JSON{}'.format(config.RED, config.END))
-    return False
+                config.logging.info('Delivery Token {} imported'.format(deliveryToken['name']))
+        else:
+            config.logging.error('{}Unable to read from Delivery Token file {}{}'.format(config.RED, delFile, config.END))
+    return True
 
+def importExtensions(apiKey, authToken, region, folder):
+    '''
+    Importing extensions
+    '''
+    config.logging.info('{}Importing extensions{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['extensions']
+    mapDict = {}
+    for extFile in os.listdir(f):
+        extension = config.readFromJsonFile(f + extFile)
+        if extension:
+            body = {
+                'extension': extension
+            }
+            extensionImport = cma.createExtension(apiKey, authToken, body, region)
+            if extensionImport:
+                config.logging.info('Extension {} imported'.format(extension['title']))
+                mapDict = addToMapper(mapDict, extension['uid'], extensionImport['extension']['uid'])
+        else:
+            config.logging.error('{}Unable to read from Extension file {}{}'.format(config.RED, extFile, config.END))
+    return createMapperFile(apiKey, folder, mapDict, 'extensions')
+
+def importGlobalFields(apiKey, authToken, region, folder, extensionsMapper):
+    '''
+    Importing global fields
+    '''
+    uidArr = []
+    config.logging.info('{}Importing global fields{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['globalFields']
+    for gfFile in os.listdir(f):
+        globalField = config.readFromJsonFile(f + gfFile)
+        if globalField:
+            globalField = replaceFromMapper(extensionsMapper, globalField, 'global fields')
+            body = {
+                'global_field': globalField
+            }
+            globalFieldImport = cma.createGlobalField(apiKey, authToken, body, region)
+            if globalFieldImport:
+                config.logging.info('Global Field {} imported'.format(globalField['title']))
+                uidArr.append(globalField['uid'])
+        else:
+            config.logging.error('{}Unable to read from Global Field file {}{}'.format(config.RED, gfFile, config.END))
+    return uidArr
 
 def findReferencedContentTypes(ctUid, contentType, importedContentTypes, globalFields):
     '''
@@ -217,21 +217,21 @@ def findReferencedContentTypes(ctUid, contentType, importedContentTypes, globalF
                 if (len(i) > 0) and (i != ctUid) and (i not in globalFields):
                     newRefsList.append(i)
     newRefsList = list(set(newRefsList)) # remove duplicates
-    cma.logging.debug('Content Type: ', ctUid)
-    cma.logging.debug('References: ', newRefsList)
-    cma.logging.debug('Already Imported: ', importedContentTypes)
+    config.logging.debug('Content Type: ', ctUid)
+    config.logging.debug('References: ', newRefsList)
+    config.logging.debug('Already Imported: ', importedContentTypes)
     for i in newRefsList:
         if i not in importedContentTypes: # We have a reference to a content type that has not been imported yet
-            cma.logging.warning('{}Not possible to import {} at this time because one ore more referenced content types have not been imported yet (All referenced content types: {}). Adding to queue.{}'.format(config.YELLOW, ctUid, newRefsList, config.END))
+            config.logging.warning('{}Not possible to import {} at this time because one ore more referenced content types have not been imported yet (All referenced content types: {}). Adding to queue.{}'.format(config.YELLOW, ctUid, newRefsList, config.END))
             return False
     return True # All references already imported
 
 def performContentTypeImport(apiKey, authToken, body, region):
     contentTypeImport = cma.createContentType(apiKey, authToken, body, region)
     if contentTypeImport:
-        cma.logging.info('{} imported'.format(body['content_type']['uid']))
+        config.logging.info('{} imported'.format(body['content_type']['uid']))
         return True
-    cma.logging.warning('{}Unable to import {}. Moving to back of queue and trying again later.{}'.format(config.YELLOW, body['content_type']['uid'], config.END))
+    config.logging.warning('{}Unable to import {}. Moving to back of queue and trying again later.{}'.format(config.YELLOW, body['content_type']['uid'], config.END))
     return False
 
 def getNamesInQueue(contentTypeQueue):
@@ -248,18 +248,18 @@ def importContentTypes(apiKey, authToken, region, folder, extensionsMapper, glob
     '''
     Importing content types
     '''
-    cma.logging.info('{}Importing content types{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['contentTypes']
-    contentTypes = config.readFromJsonFile(f)
+    config.logging.info('{}Importing content types{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['contentTypes']
     importedContentTypes = []
     contentTypeQueue = []
-    if contentTypes:
-        contentTypes = replaceFromMapper(extensionsMapper, contentTypes, 'content types') # extension uids from old and new stack mapped
-        for contentType in contentTypes['content_types']:
+    for ctFile in os.listdir(f):
+        contentType = config.readFromJsonFile(f + ctFile)
+        if contentType:
+            contentType = replaceFromMapper(extensionsMapper, contentType, 'content types')
             continueImport = findReferencedContentTypes(contentType['uid'], contentType['schema'], importedContentTypes, globalFields)
             if continueImport: # OK to continue with import of this content type
                 '''
-                Lets import it!
+                Lets import the content type!
                 '''
                 importAction = performContentTypeImport(apiKey, authToken, {'content_type': contentType}, region)
                 if importAction:
@@ -268,17 +268,19 @@ def importContentTypes(apiKey, authToken, region, folder, extensionsMapper, glob
                     contentTypeQueue.append(contentType)
             else: # Not OK to continue with import of this content type
                 contentTypeQueue.append(contentType)
+        else:
+            config.logging.error('{}Unable to read from Content Type file {}{}'.format(config.RED, ctFile, config.END))
 
-    maxTries = int(1.5 * len(contentTypeQueue))# We have to give up on some point - Length of array + 150% of the length of the queue should do it.
+    maxTries = int(2 * len(contentTypeQueue))# We have to give up on some point - Length of array + 200% of the length of the queue should do it.
     tryNumber = 1
     if contentTypeQueue:
         queueNames = getNamesInQueue(contentTypeQueue)
-        cma.logging.info('Trying to import from the content type queue since earlier ({}). Maximum tries: {}'.format(queueNames, maxTries))
+        config.logging.info('Trying to import from the content type queue since earlier ({}). Maximum tries: {}'.format(queueNames, maxTries))
     while contentTypeQueue and tryNumber <= maxTries:
         '''
         Lets now attack the unfinshed content types
         '''
-        cma.logging.info('Try: {}/{}. Content Type: {}'.format(tryNumber, maxTries, contentTypeQueue[0]['uid']))
+        config.logging.info('Try: {}/{}. Content Type: {}'.format(tryNumber, maxTries, contentTypeQueue[0]['uid']))
         body = {'content_type': contentTypeQueue[0]}
         continueImport = findReferencedContentTypes(contentTypeQueue[0]['uid'], contentTypeQueue[0]['schema'], importedContentTypes, globalFields)
         importAction = None
@@ -292,32 +294,34 @@ def importContentTypes(apiKey, authToken, region, folder, extensionsMapper, glob
         tryNumber += 1
     if (tryNumber > maxTries) and contentTypeQueue:
         queueNames = getNamesInQueue(contentTypeQueue)
-        cma.logging.error('{}Not able to import all content types. Possibly a circular dependency in the references?{}'.format(config.RED, config.END))
-        cma.logging.error('{}Content Types not imported: {}{}'.format(config.RED, queueNames, config.END))
+        config.logging.error('{}Not able to import all content types. Possibly a circular dependency in the references?{}'.format(config.RED, config.END))
+        config.logging.error('{}Content Types not imported: {}{}'.format(config.RED, queueNames, config.END))
     return True
 
 def importLabels(apiKey, authToken, region, folder):
     '''
     Importing labels
     '''
-    cma.logging.info('{}Importing labels{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['labels']
-    labels = config.readFromJsonFile(f)
-    if labels:
-        for label in labels['labels']:
+    config.logging.info('{}Importing labels{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['labels']
+    for labFile in os.listdir(f):
+        label = config.readFromJsonFile(f + labFile)
+        if label:
             labelImport = cma.createLabel(apiKey, authToken, {'label': label}, region)
             if labelImport:
-                cma.logging.info('{} imported'.format(label['name']))
-        return True
-    cma.logging.error('{}Unable to read from Label JSON{}'.format(config.RED, config.END))
-    return False
+                config.logging.info('Label {} imported'.format(label['name']))
+        else:
+            config.logging.error('{}Unable to read from Label file {}{}'.format(config.RED, labFile, config.END))
+    return True
 
 def importRoles(apiKey, authToken, region, folder):
     '''
     Importing roles
     '''
-    cma.logging.info('{}Importing roles{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['roles']
+    config.logging.info('{}Importing roles{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['roles']
+
+    # Getting current roles in import stack - Just to get the uid's of the buit in roles
     currentRoles = cma.getAllRoles(apiKey, authToken, region)
     roleUids = {
         'Developer': None,
@@ -329,10 +333,11 @@ def importRoles(apiKey, authToken, region, folder):
                 roleUids['Developer'] = role['uid']
             elif role['name'] == 'Content Manager':
                 roleUids['Content Manager'] = role['uid']
-    roles = config.readFromJsonFile(f)
-    if roles:
-        mapDict = {}
-        for role in roles['roles']:
+
+    mapDict = {}
+    for roleFile in os.listdir(f):
+        role = config.readFromJsonFile(f + roleFile)
+        if role:
             if role['name'] in ['Developer', 'Content Manager']: # Built in roles - Maybe they've been updated in the export and we need to alter them in the import stack
                 newRules = []
                 for rule in role['rules']:
@@ -359,49 +364,95 @@ def importRoles(apiKey, authToken, region, folder):
                 try:
                     mapDict = addToMapper(mapDict, role['uid'], roleImport['role']['uid'])
                 except KeyError:
-                    cma.logging.debug('Not able to map uid for role {}'.format(role['name']))
-                cma.logging.info('{} role imported'.format(role['name']))
-        return createMapperFile(apiKey, folder, mapDict, 'roles')
-    cma.logging.error('{}Unable to read from Role JSON{}'.format(config.RED, config.END))
-    return False
+                    config.logging.debug('Not able to map uid for role {}'.format(role['name']))
+                config.logging.info('{} role imported'.format(role['name']))
+        else:
+            config.logging.error('{}Unable to read from Role file {}{}'.format(config.RED, roleFile, config.END))
+    return createMapperFile(apiKey, folder, mapDict, 'roles')
 
-def importWorkflows(apiKey, token, region, folder, roleMapper):
+def importWorkflows(apiKey, authToken, region, folder, roleMapper):
     '''
     Importing workflows
     '''
-    cma.logging.info('{}Importing workflows{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['workflows']
-    workflows = config.readFromJsonFile(f)
-    if workflows:
-        mapDict = {}
-        workflows = replaceFromMapper(roleMapper, workflows, 'workflows') # role uids from old and new stack mapped
-        for workflow in workflows['workflows']:
-            workflowImport = cma.createWorkflow(apiKey, token, {'workflow': workflow}, region)
+    config.logging.info('{}Importing workflows{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['workflows']
+    mapDict = {}
+    for wfFile in os.listdir(f):
+        workflow = config.readFromJsonFile(f + wfFile)
+        if workflow:
+            workflowImport = cma.createWorkflow(apiKey, authToken, {'workflow': workflow}, region)
             if workflowImport:
                 mapDict = addToMapper(mapDict, workflow['uid'], workflowImport['workflow']['uid'])
-                cma.logging.info('{} imported'.format(workflow['name']))
-        return createMapperFile(apiKey, folder, mapDict, 'workflows')
-    cma.logging.error('{}Unable to read from Workflow JSON{}'.format(config.RED, config.END))
-    return False
+                config.logging.info('{} workflow imported'.format(workflow['name']))
+        else:
+            config.logging.error('{}Unable to read from Workflow file {}{}'.format(config.RED, wfFile, config.END))
+    return createMapperFile(apiKey, folder, mapDict, 'workflows')
 
-def importPublishingRules(apiKey, token, region, folder, mappers):
+def importPublishingRules(apiKey, authToken, region, folder, mappers):
     '''
     Importing publishing rules
     '''
-    cma.logging.info('{}Importing publishing rules{}'.format(config.BOLD, config.END))
-    f = config.localFolder + '/' + folder + '/' + config.fileNames['publishingRules']
-    publishingRules = config.readFromJsonFile(f)
-    if publishingRules:
+    config.logging.info('{}Importing publishing rules{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['publishingRules']
+    count = 1
+    for pubFile in os.listdir(f):
+        publishingRule = config.readFromJsonFile(f + pubFile)
         for key, value in mappers.items():
-            publishingRules = replaceFromMapper(value, publishingRules, key)
-        # publishingRules = replaceFromMapper(roleMapper, publishingRules, 'roles') # role uids from old and new stack mapped
-        # publishingRules = replaceFromMapper(workflowMapper, publishingRules, 'workflows') # workflow uids from old and new stack mapped
-        count = 1
-        for publishingRule in publishingRules['publishing_rules']:
-            publishingRuleImport = cma.createPublishingRule(apiKey, token, {'publishing_rule': publishingRule}, region)
-            if publishingRuleImport:
-                cma.logging.info('Publishing rule {} imported'.format(count)) # No names on publishing rules - we just use the count then to inform.
-            count += 1
-        return True
-    cma.logging.error('{}Unable to read from Publishing Rule JSON{}'.format(config.RED, config.END))
-    return False
+            publishingRule = replaceFromMapper(value, publishingRule, key) # role uids from old and new stack mapped
+        publishingRuleImport = cma.createPublishingRule(apiKey, authToken, {'publishing_rule': publishingRule}, region)
+        if publishingRuleImport:
+            config.logging.info('Publishing Rule {} imported'.format(count))
+        else:
+            config.logging.error('{}Unable to read from Publishing Rule file {}{}'.format(config.RED, pubFile, config.END))
+        count += 1
+    return True
+
+def importWebhooks(apiKey, authToken, region, folder):
+    '''
+    Importing publishing rules
+    '''
+    config.logging.info('{}Importing webhooks{}'.format(config.BOLD, config.END))
+    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['webhooks']
+    for whfile in os.listdir(f):
+        webhook = config.readFromJsonFile(f + whfile)
+        webhookImport = cma.createWebhook(apiKey, authToken, {'webhook': webhook}, region)
+        if webhookImport:
+            config.logging.info('Webhook {} imported'.format(webhook['name']))
+        else:
+            config.logging.error('{}Unable to read from Webhook file {}{}'.format(config.RED, whfile, config.END))
+    return True
+
+def importStack(importedStack, token, region, folder):
+    '''
+    Import stack function
+    '''
+    apiKey = importedStack['uid']
+    config.logging.info('{}Starting structure import{}'.format(config.BOLD, config.END))
+    startTime = time()
+    importLanguages(apiKey, token, region, folder, importedStack['masterLocale'])
+    environmentMapper = importEnvironments(apiKey, token, region, folder)
+    if not environmentMapper:
+        config.logging.info('{}No Environmentsmapper present. Were there any environments in the export?{}'.format(config.YELLOW, config.END))
+    importDeliveryTokens(apiKey, token, region, folder)
+    extensionMapper = importExtensions(apiKey, token, region, folder) # Need to map extension uids from export to import
+    if not extensionMapper:
+        config.logging.info('{}No Extensionmapper present. Were there any extensions in the export?{}'.format(config.YELLOW, config.END))
+    globalFields = importGlobalFields(apiKey, token, region, folder, extensionMapper)
+    importContentTypes(apiKey, token, region, folder, extensionMapper, globalFields) # Using global fields to differentiate them from other references
+    importLabels(apiKey, token, region, folder)
+    roleMapper = importRoles(apiKey, token, region, folder) # Need to map role uids from export to import
+    if not roleMapper:
+        config.logging.info('{}No Rolemapper present. Were there any custom roles in the export?{}'.format(config.YELLOW, config.END))
+    workflowMapper = importWorkflows(apiKey, token, region, folder, roleMapper) # Need to map workflow uids from export to import
+    if not workflowMapper:
+        config.logging.info('{}No Workflowmapper present. Were there any worlflows in the export?{}'.format(config.YELLOW, config.END))
+    mappers = {
+        'environments': environmentMapper,
+        'workflows': workflowMapper,
+        'roles': roleMapper
+    }
+    importPublishingRules(apiKey, token, region, folder, mappers)
+    importWebhooks(apiKey, token, region, folder)
+    endTime = time()
+    totalTime = endTime - startTime
+    config.logging.info('{}Import finished in {} seconds{}'.format(config.BOLD, totalTime, config.END))

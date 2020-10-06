@@ -12,21 +12,22 @@
 ## How to use:
 * Run `python app.py` and answer questions that you get asked.
 * If in trouble: Contact Oskar.
-* Exported things go to a folder called `content`.
+* Exported content goes to a folder called `data/stacks` (variables in config module).
 
 ## Current Limitations:
-* Does not export assets when this is written.
 * Does only import stack structure at this point.
-* If you don't have a delivery token defined for environment, it is only possible to export all entries (not using the delivery token).
 * Circular dependencies (references) in content model breaks content model import.
-* Something else: Contact Oskar.
+* Content Revision's are not exported/imported. Only newest versions, or what is currently published is exported.
+* Because only a single version of entries and assets is exported it is not possible to publish separate versions when imported (Like is possible between environments).
+* Something else? Contact Oskar.
 
 ## ToDo:
 * Add Automatic Unit Testing and Mocking.
 * Add Assets Export.
 * Add Asset/Entries Import.
 * Add Optional Publishing and Workflow Stage Setting on Import.
-* Allow exporting Environments without having the delivery token defined.
 * Refactor.
 * Make an application, e.g. https://realpython.com/python-application-layouts/
+* Make it possible to import Demo stacks from Github (Lower Priority).
+* Instead of saving the Username and Password, just save the Auth Token.
 * Any ideas: Contact Oskar.

@@ -1,146 +1,211 @@
 '''
 oskar.eiriksson@contentstack.com
-2020-08-13
+2020-10-02
 
-Exports stack structure to local folder..
-
-See Readme for details.
+Exports stack structure to local folder.
+Limitation: Does not export Management Tokens.
 '''
-from time import sleep
+from time import sleep, time
+import os
+import inquirer
 import cma
 import config
 
+def chooseFolder():
+    '''
+    Lists up folders in export folder.
+    Optionally, there's a folder to be ignored from the list.
+    The user just picks one.
+    '''
+    ignoreFolder = config.mapperFolder
+    allFolders = []
+    for f in os.listdir(config.dataRootFolder + config.stackRootFolder):
+        f = f + '/'
+        if f != ignoreFolder:
+            allFolders.append(f)
+    folder = [
+        inquirer.List('chosenFolder',
+                      message="{}Choose export folder to import from{}".format(config.BOLD, config.END),
+                      choices=allFolders,
+                      ),
+    ]
+    folder = inquirer.prompt(folder)['chosenFolder']
+    return folder
+
+def writeExport(exportItem, folderPath, keyToLabelFile):
+    '''
+    re-usable function where we attempt to write exports to file
+    example for content types: (contentTypeBody, data/<exportedStackName + Datestamp>/contentTypes/, 'uid')
+        --> 'uid' is just the key from the export to be used as file name... sometimes the uid, the name, the title... just has to be a unique field
+    '''
+
+    for item in exportItem:
+        filePath = folderPath + item[keyToLabelFile].replace('/', '-') + '.json' # I personally put a "/" in a custom role name. It breaks everything here...
+        write = config.writeToJsonFile(item, filePath)
+        if not write:
+            config.logging.error('{}Not able to write to file: {}{}'.format(config.BOLD, filePath, config.END))
+    return True
 
 def exportContentTypes(apiKey, token, region, folder):
     '''
     Exporting content types with global fields schema
     '''
-    cma.logging.info('Exporting content types')
+    config.logging.info('Exporting content types')
+    folderPath = config.defineFullFolderPath(folder, 'contentTypes')
     contentTypesExport = cma.getAllContentTypes(apiKey, token, region)
     if contentTypesExport:
-        return config.writeToJsonFile(contentTypesExport, config.localFolder + '/' + folder + '/' + config.fileNames['contentTypes'])
-    cma.logging.error('Missing content type response from Contentstack.')
+        return writeExport(contentTypesExport['content_types'], folderPath, 'uid')
+    config.logging.warning('{}Missing content type response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def getContentTypeUids(folder):
     '''
-    Reads from content type JSON file and returns an array with uids of all content types
+    Creates a list with all content type uids
     '''
-    cma.logging.info('Reading content type json file and getting uids of all types')
-    ct = config.readFromJsonFile(config.localFolder + '/' + folder + '/' + config.fileNames['contentTypes'])
+    path = config.defineFullFolderPath(folder, 'contentTypes')
     ctArr = []
-    for contentType in ct['content_types']:
-        ctArr.append(contentType['uid'])
-    cma.logging.debug('All Content Type UIDs:')
-    cma.logging.debug(ctArr)
+    for ct in path:
+        ctArr.append(ct.strip('json'))
     return ctArr
 
 def exportGlobalFields(apiKey, token, region, folder):
     '''
     Exporting global fields
     '''
-    cma.logging.info('Exporting global fields')
+    config.logging.info('Exporting global fields')
+    folderPath = config.defineFullFolderPath(folder, 'globalFields')
     globalFieldsExport = cma.getAllGlobalFields(apiKey, token, region)
     if globalFieldsExport:
-        return config.writeToJsonFile(globalFieldsExport, config.localFolder + '/' + folder + '/' + config.fileNames['globalFields'])
-    cma.logging.error('Missing global fields response from Contentstack.')
+        return writeExport(globalFieldsExport['global_fields'], folderPath, 'uid')
+    config.logging.warning('{}Missing global field response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportExtensions(apiKey, token, region, folder):
     '''
     Exporting Extensions
     '''
-    cma.logging.info('Exporting extensions')
+    config.logging.info('Exporting extensions')
+    folderPath = config.defineFullFolderPath(folder, 'extensions')
     extensionsExport = cma.getAllExtensions(apiKey, token, region)
     if extensionsExport:
-        return config.writeToJsonFile(extensionsExport, config.localFolder + '/' + folder + '/' + config.fileNames['extensions'])
-    cma.logging.error('Missing extensions response from Contentstack.')
+        return writeExport(extensionsExport['extensions'], folderPath, 'title')
+    config.logging.warning('{}Missing extensions response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportWorkflows(apiKey, token, region, folder):
     '''
     Exporting workflows
     '''
-    cma.logging.info('Exporting workflows')
+    config.logging.info('Exporting workflows')
+    folderPath = config.defineFullFolderPath(folder, 'workflows')
     workflowsExport = cma.getAllWorkflows(apiKey, token, region)
     if workflowsExport:
-        return config.writeToJsonFile(workflowsExport, config.localFolder + '/' + folder + '/' + config.fileNames['workflows'])
-    cma.logging.error('Missing workflows response from Contentstack.')
+        return writeExport(workflowsExport['workflows'], folderPath, 'name')
+    config.logging.warning('{}Missing workflow response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportPublishingRules(contentTypeUids, apiKey, token, region, folder):
     '''
     Exporting publishing rules
     '''
-    cma.logging.info('Exporting all publishing rules')
+    config.logging.info('Exporting all publishing rules')
+    folderPath = config.defineFullFolderPath(folder, 'publishingRules')
     publishingRulesExport = cma.getAllPublishingRules(contentTypeUids, apiKey, token, region)
     if publishingRulesExport:
-        return config.writeToJsonFile(publishingRulesExport, config.localFolder + '/' + folder + '/' + config.fileNames['publishingRules'])
-    cma.logging.error('Missing publishing rules response from Contentstack.')
+        return writeExport(publishingRulesExport['publishing_rules'], folderPath, 'uid')
+    config.logging.warning('{}Missing publishing rule response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportLabels(apiKey, token, region, folder):
     '''
     Exporting Labels
     '''
-    cma.logging.info('Exporting all labels')
+    config.logging.info('Exporting all labels')
+    folderPath = config.defineFullFolderPath(folder, 'labels')
     labelsExport = cma.getAllLabels(apiKey, token, region)
     if labelsExport:
-        return config.writeToJsonFile(labelsExport, config.localFolder + '/' + folder + '/' + config.fileNames['labels'])
-    cma.logging.error('Missing labels response from Contentstack.')
+        return writeExport(labelsExport['labels'], folderPath, 'name')
+    config.logging.warning('{}Missing label response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportLanguages(apiKey, token, region, folder):
     '''
     Exporting Languages
     '''
-    cma.logging.info('Exporting all languages')
+    config.logging.info('Exporting all languages')
+    folderPath = config.defineFullFolderPath(folder, 'languages')
     languagesExport = cma.getAllLanguages(apiKey, token, region)
     if languagesExport:
-        return config.writeToJsonFile(languagesExport, config.localFolder + '/' + folder + '/' + config.fileNames['languages'])
-    cma.logging.error('Missing languages response from Contentstack.')
+        return writeExport(languagesExport['locales'], folderPath, 'code')
+    config.logging.warning('{}Missing language response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportEnvironments(apiKey, token, region, folder):
     '''
     Exporting Environments
     '''
-    cma.logging.info('Exporting All Environments')
+    config.logging.info('Exporting All Environments')
+    folderPath = config.defineFullFolderPath(folder, 'environments')
     environmentsExport = cma.getAllEnvironments(apiKey, token, region)
     if environmentsExport:
-        return config.writeToJsonFile(environmentsExport, config.localFolder + '/' + folder + '/' + config.fileNames['environments'])
-    cma.logging.error('Missing environments response from Contentstack.')
+        return writeExport(environmentsExport['environments'], folderPath, 'name')
+    config.logging.warning('{}Missing environment response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportDeliveryTokens(apiKey, token, region, folder):
     '''
     Exporting Delivery Tokens
     '''
-    cma.logging.info('Exporting All Delivery Tokens')
+    config.logging.info('Exporting All Delivery Tokens')
+    folderPath = config.defineFullFolderPath(folder, 'deliveryTokens')
     deliveryTokensExport = cma.getAllDeliveryTokens(apiKey, token, region)
     if deliveryTokensExport:
-        return config.writeToJsonFile(deliveryTokensExport, config.localFolder + '/' + folder + '/' + config.fileNames['deliveryTokens'])
-    cma.logging.error('Missing delivery tokens response from Contentstack.')
+        return writeExport(deliveryTokensExport['tokens'], folderPath, 'name')
+    config.logging.warning('{}Missing delivery token response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportRoles(apiKey, token, region, folder):
     '''
     Exporting Roles
     '''
-    cma.logging.info('Exporting All Roles')
+    config.logging.info('Exporting All Roles')
+    folderPath = config.defineFullFolderPath(folder, 'roles')
     rolesExport = cma.getAllRoles(apiKey, token, region)
     if rolesExport:
-        return config.writeToJsonFile(rolesExport, config.localFolder + '/' + folder + '/' + config.fileNames['roles'])
-    cma.logging.error('Missing roles response from Contentstack.')
+        return writeExport(rolesExport['roles'], folderPath, 'name')
+    config.logging.warning('{}Missing role response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportWebhooks(apiKey, token, region, folder):
     '''
     Exporting Webhooks
     '''
-    cma.logging.info('Exporting All Webhooks')
+    config.logging.info('Exporting All Webhooks')
+    folderPath = config.defineFullFolderPath(folder, 'webhooks')
     webhooksExport = cma.getAllWebhooks(apiKey, token, region)
     if webhooksExport:
-        return config.writeToJsonFile(webhooksExport, config.localFolder + '/' + folder + '/' + config.fileNames['webhooks'])
-    cma.logging.error('Missing webhooks response from Contentstack.')
+        return writeExport(webhooksExport['webhooks'], folderPath, 'name')
+    config.logging.warning('{}Missing webhook response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
+
+def exportStack(apiKey, token, region, folder):
+    '''
+    Export stack function
+    '''
+    config.logging.info('{}Starting structure export to folder: {}{}'.format(config.BOLD, folder['fullPath'], config.END))
+    startTime = time()
+    exportContentTypes(apiKey, token, region, folder)
+    exportGlobalFields(apiKey, token, region, folder)
+    exportExtensions(apiKey, token, region, folder)
+    exportWorkflows(apiKey, token, region, folder)
+    contentTypeUids = getContentTypeUids(folder) # Need to get all content types to fetch publishing rules
+    exportPublishingRules(contentTypeUids, apiKey, token, region, folder)
+    exportEnvironments(apiKey, token, region, folder)
+    exportDeliveryTokens(apiKey, token, region, folder)
+    exportRoles(apiKey, token, region, folder)
+    exportWebhooks(apiKey, token, region, folder)
+    exportLabels(apiKey, token, region, folder)
+    exportLanguages(apiKey, token, region, folder)
+    endTime = time()
+    totalTime = endTime - startTime
+    config.logging.info('{}Export finished in {} seconds{}'.format(config.BOLD, totalTime, config.END))
