@@ -22,11 +22,8 @@
 
 ## ToDo:
 * Add Automatic Unit Testing and Mocking.
-* Add Assets Export.
-* Add Asset/Entries Import.
 * Add Optional Publishing and Workflow Stage Setting on Import.
 * Refactor.
 * Make an application, e.g. https://realpython.com/python-application-layouts/
 * Make it possible to import Demo stacks from Github (Lower Priority).
-* Instead of saving the Username and Password, just save the Auth Token.
 * Any ideas: Contact Oskar.
