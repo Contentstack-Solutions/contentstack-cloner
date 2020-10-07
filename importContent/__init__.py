@@ -6,7 +6,9 @@ Imports stack content from chosen local folder.
 '''
 import os
 from time import sleep
-# import pprint
+import re
+import ast
+from benedict import benedict
 import inquirer
 import cma
 import config
@@ -217,41 +219,30 @@ def importFolders(folder, apiKey, token, region):
         mapDict = {}
         folderData = config.readFromJsonFile(folderFile)
         config.logging.info('Found Folders in Export')
-        folderQueue = []
-        for folderExport in folderData['assets']:
-            exportedUid = folderExport['uid']
-            if 'parent_uid' in folderExport:
-                if folderExport['parent_uid']:
-                    if folderExport['parent_uid'] not in mapDict:
-                        folderQueue.append(folderExport)
+        folderExport = folderData['assets']
+        maxTries = len(folderExport) * 2
+        tryNo = 0
+        while folderExport and tryNo <= maxTries:
+            tryNo += 1
+            if tryNo == maxTries:
+                config.logging.warning('{}Last possible try importing folders! (Try number: {}){}'.format(config.YELLOW, tryNo, config.END))
+            if 'parent_uid' in folderExport[0]:
+                parentUid = folderExport[0]['parent_uid']
             else:
-                importedFolder = cma.createFolder(apiKey, token, region, folderExport['name'])
-                if importedFolder:
-                    config.logging.info('Folder Imported (1st try): {}'.format(importedFolder['asset']['name']))
-                    mapDict = importStructure.addToMapper(mapDict, exportedUid, importedFolder['asset']['uid'])
-        # print(folderQueue)
-        print(mapDict)
-            # if 'parent_uid' in folderExport:
-            #     if folderExport['parent_uid'] is not None:
-            #         if folderExport['parent_uid'] not in mapDict:
-            #             folderQueue.append(folderExport)
-            # else:
-            #     importedFolder = cma.createFolder(apiKey, token, region, folderExport['name'])
-            #     if importedFolder:
-            #         config.logging.info('Folder Imported: {}'.format(importedFolder['asset']['name']))
-            #         mapDict = importStructure.addToMapper(mapDict, exportedUid, importedFolder['asset']['uid'])
-        while folderQueue:
-            folderExport = folderQueue[0]
-            if folderExport['parent_uid'] not in mapDict:
-                folderQueue.append(folderExport)
-                folderQueue.pop(0)
-            else:
-                parentUid = mapDict[folderExport['parent_uid']]
-                importedFolder = cma.createFolder(apiKey, token, region, folderExport['name'], parentUid)
-                if importedFolder:
-                    config.logging.info('Folder Imported: {}'.format(importedFolder['asset']['name']))
-                    mapDict = importStructure.addToMapper(mapDict, exportedUid, importedFolder['asset']['uid'])
-                    folderQueue.pop(0)
+                parentUid = None
+            if parentUid:
+                if parentUid not in mapDict:
+                    folderExport.append(folderExport[0])
+                    folderExport.pop(0)
+                    continue
+            importedFolder = cma.createFolder(apiKey, token, region, folderExport[0]['name'])
+            if importedFolder:
+                config.logging.info('Folder Imported: {}'.format(importedFolder['asset']['name']))
+                mapDict = importStructure.addToMapper(mapDict, folderExport[0]['uid'], importedFolder['asset']['uid'])
+                folderExport.pop(0)
+                continue
+            folderExport.append(folderExport[0])
+            folderExport.pop(0)
         return importStructure.createMapperFile(apiKey, folder.split('/')[-2], mapDict, 'folders')
     config.logging.info('No Folders Found in Export')
     return None
@@ -302,6 +293,47 @@ def importAssets(token, importedStack, folder, exportReport, localAssets, region
     print(folder.split('/')[-2])
     return importStructure.createMapperFile(apiKey, folder.split('/')[-2], mapDict, 'assets')
 
+# def replaceAssetFromMapper(mapper, exportedJson, msg=''):
+#     '''
+#     Finding all references of old asset IDs - Removing it from the entry (the whole nested dict) and replacing with the new uid, and only that uid
+#     This is 1000% not the best way to do this...
+#     I got stuck trying to search the dict iteratively and replacing a whole nested value that could both be a nested dict and a list with dicts
+#     '''
+#     if exportedJson['uid'] == 'bltbdc83dc124ef0168':
+#         print('WHERE ARE GONNA FAIL HERE FOR SOME FXXXX REASON')
+#     exportString = str(exportedJson)
+#     config.logging.info('Running mapper on {} export'.format(msg))
+#     for key, value in mapper.items():
+#         searchString = r"{'uid': '" + key + "',.*?}.*?\].*?}"#.format(value) # using regex to replace the things
+#         newString = re.sub(searchString, "'{}'".format(value), exportString)
+#     importedDict = ast.literal_eval(newString) # Converting the string back to a dictionary
+#     config.logging.info('Finished running mapper on {} export'.format(msg))
+#     return importedDict
+
+def replaceStrInDict(d, search, value):
+    string = str(search)
+    dString = str(d)
+    dString = dString.replace(string, "'" + value + "'")
+    return ast.literal_eval(dString) # Converting the string back to a dictionary
+
+def replaceAssetFromMapper(d, mapper, msg=''):
+    '''
+    Using benedict to replace old asset uids with new
+    '''
+    config.logging.info('Running Asset Mapper on {} export'.format(msg))
+    bDict = benedict(d)
+    keys = bDict.keypaths(indexes=True)
+    for key, value in mapper.items():
+        search = bDict.search(key, in_keys=False, in_values=True, exact=True, case_sensitive=True)
+        while search:
+            for k in keys:
+                if bDict[k] == search[0][0]:
+                    # print('found')
+                    # print(k)
+                    # print(bDict[k])
+                    d = replaceStrInDict(d, bDict[k], value)
+            search.pop(0)
+    return d
 
 def importEntries(contentTypes, languages, folder, region, token, apiKey, assetMapper=None):
     '''
@@ -311,7 +343,6 @@ def importEntries(contentTypes, languages, folder, region, token, apiKey, assetM
     mapDict = {}
     for contentType in contentTypes:
         ctFolder = entryFolder + contentType + '/'
-        importedEntries = []
         config.logging.info('{}Importing Entries of type: {}{}'.format(config.BOLD, contentType, config.END))
         for language in languages:
             languageFile = ctFolder + language + '.json'
@@ -320,8 +351,13 @@ def importEntries(contentTypes, languages, folder, region, token, apiKey, assetM
                 entries = config.readFromJsonFile(languageFile)
                 for entry in entries['entries']:
                     if (entry['uid'] not in mapDict) and (entry['locale'] == language):
+                        # print('ENTRY BEFORE MAP:')
+                        # print(entry)
+                        # print('----')
                         if assetMapper:
-                            entry = importStructure.replaceFromMapper(assetMapper, entry, 'entry')
+                            entry = replaceAssetFromMapper(entry, assetMapper, 'entry assets')
+                        # print('ENTRY AFTER MAP:')
+                        # print(entry)
                         create = cma.createEntry(apiKey, token, entry, region, contentType, language)
                         if create:
                             config.logging.info('Entry Created - Title: {} - Language: {}'.format(create['entry']['title'], language))
