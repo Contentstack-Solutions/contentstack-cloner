@@ -8,6 +8,7 @@
   * `pip install requests`
   * `pip install nested-lookup`
   * `pip install inquirer`
+  * `pip install python-benedict`
 
 ## How to use:
 * Run `python app.py` and answer questions that you get asked.
@@ -16,7 +17,7 @@
 
 ## Current Limitations:
 * Circular dependencies (references) in content model breaks content model import.
-* Entry Import still buggy.
+* Entry Import still a bit buggy. Refactoring need
 * Content Revision's are not exported/imported. Only newest versions, or what is currently published is exported.
 * Because only a single version of entries and assets is exported it is not possible to publish separate versions when imported (Like is possible between environments).
 * Something else? Contact Oskar.
