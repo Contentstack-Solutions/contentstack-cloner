@@ -16,8 +16,8 @@
 * Exported content goes to a folder called `data/stacks` (variables in config module).
 
 ## Current Limitations:
-* Circular dependencies (references) in content model breaks content model import.
-* Entry Import still a bit buggy. Refactoring need
+* Circular dependencies (references) in content model breaks content model import. (Will be fixed)
+* Entry Import still a bit buggy. Refactoring needed along with reference mapping. Asset mapping should work.
 * Content Revision's are not exported/imported. Only newest versions, or what is currently published is exported.
 * Because only a single version of entries and assets is exported it is not possible to publish separate versions when imported (Like is possible between environments).
 * Something else? Contact Oskar.
