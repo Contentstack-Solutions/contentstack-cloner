@@ -110,9 +110,10 @@ def typicalGetIterate(url, apiKey, authToken, dictKey, environment=None):
                 count = res.json()['count'] # Setting the real value of count here
             else:
                 count = 0
+            config.logging.debug('{}Response Now: {} {}'.format(config.YELLOW, res.json(), config.END))
             result = result + res.json()[dictKey]
+            config.logging.debug('{}Result as of Now: {} {}'.format(config.YELLOW, result, config.END))
             skip += 100
-            config.logging.debug('Result as of now: {}'.format(result))
         else:
             config.logging.error('{red}All {key} Export: Failed getting {key}{end}'.format(red=config.RED, key=dictKey, end=config.END))
             config.logging.error('{}URL: {}{}'.format(config.RED, url, config.END))
@@ -210,8 +211,6 @@ def getAllExtensions(apiKey, token, region):
     '''
     Gets all extensions
     sample url: https://api.contentstack.io/v3/extensions
-
-    Limitation: This has not been tested on stack with over 100 extensions.
     '''
     url = '{region}v3/extensions?include_count=true'.format(region=region)
     return typicalGetIterate(url, apiKey, token, 'extensions')
@@ -220,11 +219,11 @@ def getAllWorkflows(apiKey, token, region):
     '''
     Gets all workflows
     sample url: https://api.contentstack.io/v3/workflows/
-
-    Limitation: This has not been tested on stack with over 100 workflows
+    Limitation: Using simple get without iteration because it sometimes fails using the iterate one where there are no workflows. I do not know why.
     '''
     url = '{region}v3/workflows?include_count=true'.format(region=region)
-    return typicalGetIterate(url, apiKey, token, 'workflows')
+    typicalGetSimple(url, apiKey, token)
+    # return typicalGetIterate(url, apiKey, token, 'workflows')
 
 def getAllPublishingRules(contentTypeUids, apiKey, token, region):
     '''

@@ -29,4 +29,4 @@
 * Refactor.
 * Make an application, e.g. https://realpython.com/python-application-layouts/
 * Make it possible to import Demo stacks from Github (Lower Priority).
-* Any ideas: Contact Oskar.
+* Any ideas: Contact Ron or Oskar.

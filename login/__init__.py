@@ -13,14 +13,18 @@ def chooseRegion():
     '''
     Choosing between available Contentstack regions
     '''
+    regionMap = {
+        'North America': 'US',
+        'Europe': 'EU'
+    }
     chooseRegion = [
         inquirer.List('chosenRegion',
                       message="{}Choose Region:{}".format(config.BOLD, config.END),
-                      choices=['US', 'EU'],
+                      choices=['North America', 'Europe'],
                       ),
     ]
     region = inquirer.prompt(chooseRegion)['chosenRegion']
-    return region
+    return regionMap[region]
 
 def executeLogin(loginInfo, maxTries, count=1):
     '''

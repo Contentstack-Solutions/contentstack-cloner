@@ -47,49 +47,53 @@ def findStack(orgs, authToken, region, action='EXPORT'):
     '''
     Choosing the org and finding the stack to either export from or import to
     '''
-    orgList = []
-    for name, value in orgs.items():
-        if value['isOwner']:
-            name = name + ' (You are the owner)'
-        orgList.append(name)
-    orgList.append('Cancel and Exit')
+    try:
+        orgList = []
+        for name, value in orgs.items():
+            if value['isOwner']:
+                name = name + ' (You are the owner)'
+            orgList.append(name)
+        orgList = sorted(orgList)
+        orgList.append('Cancel and Exit')
 
-    chooseOrg = [
-        inquirer.List('chosenOrg',
-                      message="{}Choose Organization to work on ({}){}".format(config.BOLD, action, config.END),
-                      choices=orgList,
-                      ),
-    ]
-    orgName = inquirer.prompt(chooseOrg)['chosenOrg'].replace(' (You are the owner)', '')
-    if orgName == 'Cancel and Exit':
-        return None, None
-    orgUid = orgs[orgName]['uid']
-    stacks = cma.getAllStacks(cma.constructAuthTokenHeader(authToken), orgUid, region)
-    stacks = restructureExportStacks(stacks)
-    if action == 'EXPORT' or action == 'IMPORT CONTENT':
-        stackList = []
-    elif action == 'IMPORT':
-        stackList = ['Create a new stack']
-    unsortedList = []
-    for name, _ in stacks.items():
-        unsortedList.append(name)
-    stackList = stackList + sorted(unsortedList) + ['Cancel and Exit']
-    chooseStack = [
-        inquirer.List('chosenStack',
-                      message="{}Choose Stack to work on ({}){}".format(config.BOLD, action, config.END),
-                      choices=stackList,
-                      ),
-    ]
-    stackName = inquirer.prompt(chooseStack)['chosenStack']
-    if stackName == 'Create a new stack':
-        config.logging.info('{}New stack to be created for import{}'.format(config.BOLD, config.END))
-        stackName, stack = importStructure.createNewStack(authToken, orgUid, region)
-        if stackName:
-            return stackName, restructureCreatedStack(stack)
-        return None, None
-    elif stackName == 'Cancel and Exit':
-        return None, None
-    return stackName, stacks[stackName]
+        chooseOrg = [
+            inquirer.List('chosenOrg',
+                          message="{}Choose Organization to work on ({}){}".format(config.BOLD, action, config.END),
+                          choices=orgList,
+                          ),
+        ]
+        orgName = inquirer.prompt(chooseOrg)['chosenOrg'].replace(' (You are the owner)', '')
+        if orgName == 'Cancel and Exit':
+            return None, None
+        orgUid = orgs[orgName]['uid']
+        stacks = cma.getAllStacks(cma.constructAuthTokenHeader(authToken), orgUid, region)
+        stacks = restructureExportStacks(stacks)
+        if action == 'EXPORT' or action == 'IMPORT CONTENT':
+            stackList = []
+        elif action == 'IMPORT':
+            stackList = ['Create a new stack']
+        unsortedList = []
+        for name, _ in stacks.items():
+            unsortedList.append(name)
+        stackList = stackList + sorted(unsortedList) + ['Cancel and Exit']
+        chooseStack = [
+            inquirer.List('chosenStack',
+                          message="{}Choose Stack to work on ({}){}".format(config.BOLD, action, config.END),
+                          choices=stackList,
+                          ),
+        ]
+        stackName = inquirer.prompt(chooseStack)['chosenStack']
+        if stackName == 'Create a new stack':
+            config.logging.info('{}New stack to be created for import{}'.format(config.BOLD, config.END))
+            stackName, stack = importStructure.createNewStack(authToken, orgUid, region)
+            if stackName:
+                return stackName, restructureCreatedStack(stack)
+            return None, None
+        elif stackName == 'Cancel and Exit':
+            return None, None
+        return stackName, stacks[stackName]
+    except TypeError:
+        exitProgram()
 
 def initiateExportStackStructure(organizations, token, region):
     '''
@@ -186,26 +190,29 @@ def whatToImport(organizations, token, region):
     '''
     Listing up import options
     '''
-    chooseAction = [
-        inquirer.List('chosenAction',
-                      message="{}Choose Action to perform:{}".format(config.BOLD, config.END),
-                      choices=['Import Stack Structure', 'Import Stack Structure and Content', 'Import Only Content', 'Go Back'],
-                      ),
-    ]
-    importAnswer = inquirer.prompt(chooseAction)['chosenAction']
-    if importAnswer == 'Import Stack Structure':
-        initiateImportStackStructure(organizations, token, region)
-    elif importAnswer == 'Import Stack Structure and Content':
-        folder, importedStack = initiateImportStackStructure(organizations, token, region)
-        exportReport = importContent.readExportReport(folder)
-        initiateImportStackContent(token, folder, importedStack, exportReport, region)
-    elif importAnswer == 'Import Only Content':
-        folder, exportReport = importContent.findImportContent(organizations, token, region)
-        _, importedStack = findStack(organizations, token, region, 'IMPORT CONTENT')
-        initiateImportStackContent(token, folder, importedStack, exportReport, region)
-    elif importAnswer == 'Go Back':
+    try:
+        chooseAction = [
+            inquirer.List('chosenAction',
+                          message="{}Choose Action to perform:{}".format(config.BOLD, config.END),
+                          choices=['Import Stack Structure', 'Import Stack Structure and Content', 'Import Only Content', 'Go Back'],
+                          ),
+        ]
+        importAnswer = inquirer.prompt(chooseAction)['chosenAction']
+        if importAnswer == 'Import Stack Structure':
+            initiateImportStackStructure(organizations, token, region)
+        elif importAnswer == 'Import Stack Structure and Content':
+            folder, importedStack = initiateImportStackStructure(organizations, token, region)
+            exportReport = importContent.readExportReport(folder)
+            initiateImportStackContent(token, folder, importedStack, exportReport, region)
+        elif importAnswer == 'Import Only Content':
+            folder, exportReport = importContent.findImportContent(organizations, token, region)
+            _, importedStack = findStack(organizations, token, region, 'IMPORT CONTENT')
+            initiateImportStackContent(token, folder, importedStack, exportReport, region)
+        elif importAnswer == 'Go Back':
+            return None
         return None
-    return None
+    except TypeError:
+        exitProgram()
 
 def exitProgram():
     sleep(0.3)
@@ -214,45 +221,51 @@ def exitProgram():
     sys.exit()
 
 def startupQuestion():
-    action = [
-        inquirer.List('action',
-                      message="{}Choose Action to perform:{}".format(config.BOLD, config.END),
-                      choices=['Export', 'Import', 'Exit'],
-                      ),
-    ]
-    answer = inquirer.prompt(action)['action']
-    return answer
+    try:
+        action = [
+            inquirer.List('action',
+                          message="{}Choose Action to perform:{}".format(config.BOLD, config.END),
+                          choices=['Export', 'Import', 'Exit'],
+                          ),
+        ]
+        answer = inquirer.prompt(action)['action']
+        return answer
+    except TypeError:
+        exitProgram()
 
 if __name__ == '__main__':
     '''
     Everything starts here
     '''
-    print('''
-    {yellow}Export/Import Stack Structure and/or Content.{end}
-    {cyan}- Exports a Stack Structure, to the local disk.{end}
-    {blue}- Export Entries/Assets, to the local disk.{end}
-    {cyan}- Imports a Stack Structure, from the local disk.{end}
-    {blue}- Imports Entries/Assets, from the local disk.{end}
+    try:
+        print('''
+        {yellow}Export/Import Stack Structure and/or Content.{end}
+        {cyan}- Exports a Stack Structure, to the local disk.{end}
+        {blue}- Export Entries/Assets, to the local disk.{end}
+        {cyan}- Imports a Stack Structure, from the local disk.{end}
+        {blue}- Imports Entries/Assets, from the local disk.{end}
 
-    {bold}First! Answer a few questions.{end}
-    '''.format(yellow=config.YELLOW, cyan=config.CYAN, blue=config.BLUE, bold=config.BOLD, end=config.END))
+        {bold}First! Answer a few questions.{end}
+        '''.format(yellow=config.YELLOW, cyan=config.CYAN, blue=config.BLUE, bold=config.BOLD, end=config.END))
 
-    '''
-    Login starts
-    '''
-    region, userInfo, liveUserInfo, token = login.startup()
-    config.logging.info('Logged in as: {}'.format(userInfo['username']))
-    orgs = restructureOrgs(liveUserInfo) # Making the org output simpler
-    '''
-    Login finished - Lets ask the user what he/she wants to do
-    '''
-    config.checkDir(config.dataRootFolder)
-    config.checkDir(config.dataRootFolder + config.stackRootFolder)
-    startupAction = None
-    while startupAction != 'Exit':
-        startupAction = startupQuestion()
-        if startupAction == 'Export':
-            whatToExport(orgs, token, region)
-        elif startupAction == 'Import':
-            whatToImport(orgs, token, region)
-    exitProgram()
+        '''
+        Login starts
+        '''
+        region, userInfo, liveUserInfo, token = login.startup()
+        config.logging.info('Logged in as: {}'.format(userInfo['username']))
+        orgs = restructureOrgs(liveUserInfo) # Making the org output simpler
+        '''
+        Login finished - Lets ask the user what he/she wants to do
+        '''
+        config.checkDir(config.dataRootFolder)
+        config.checkDir(config.dataRootFolder + config.stackRootFolder)
+        startupAction = None
+        while startupAction != 'Exit':
+            startupAction = startupQuestion()
+            if startupAction == 'Export':
+                whatToExport(orgs, token, region)
+            elif startupAction == 'Import':
+                whatToImport(orgs, token, region)
+        exitProgram()
+    except KeyboardInterrupt:
+        exitProgram()
