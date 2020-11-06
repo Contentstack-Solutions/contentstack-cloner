@@ -136,10 +136,6 @@ def printOutReport(exportReport):
         workflows = 'NOT'
     else:
         workflows = ''
-    # if 'AssetExportMethod' in exportReport:
-    #     assetExportMethod = exportReport['AssetExportMethod']
-    # else:
-    #     assetExportMethod = None
     masterLocale = exportReport['stackStructureExportInfo']['stack']['masterLocale']
     contentExportInfo = exportReport['contentExportInfo']
     '''
@@ -289,32 +285,21 @@ def importAssets(token, importedStack, folder, exportReport, localAssets, region
                 importedAsset = importAnAsset(region, token, apiKey, metaData, assetFile, folderMapper)
                 if importedAsset:
                     importStructure.addToMapper(mapDict, metaData.split('/')[-2], importedAsset['asset']['uid'])
-    print(folder)
-    print(folder.split('/')[-2])
     return importStructure.createMapperFile(apiKey, folder.split('/')[-2], mapDict, 'assets')
 
-# def replaceAssetFromMapper(mapper, exportedJson, msg=''):
-#     '''
-#     Finding all references of old asset IDs - Removing it from the entry (the whole nested dict) and replacing with the new uid, and only that uid
-#     This is 1000% not the best way to do this...
-#     I got stuck trying to search the dict iteratively and replacing a whole nested value that could both be a nested dict and a list with dicts
-#     '''
-#     if exportedJson['uid'] == 'bltbdc83dc124ef0168':
-#         print('WHERE ARE GONNA FAIL HERE FOR SOME FXXXX REASON')
-#     exportString = str(exportedJson)
-#     config.logging.info('Running mapper on {} export'.format(msg))
-#     for key, value in mapper.items():
-#         searchString = r"{'uid': '" + key + "',.*?}.*?\].*?}"#.format(value) # using regex to replace the things
-#         newString = re.sub(searchString, "'{}'".format(value), exportString)
-#     importedDict = ast.literal_eval(newString) # Converting the string back to a dictionary
-#     config.logging.info('Finished running mapper on {} export'.format(msg))
-#     return importedDict
-
-def replaceStrInDict(d, search, value):
+def replaceAssetStrInDict(d, search, value):
     string = str(search)
     dString = str(d)
     dString = dString.replace(string, "'" + value + "'")
     return ast.literal_eval(dString) # Converting the string back to a dictionary
+
+def replaceReferenceStrInDict(entry, search, importUid):
+    string = str(search)
+    contentType = search['_content_type_uid']
+    dString = str(entry)
+    dString = dString.replace(string, "{'uid': '" + importUid + "', '_content_type_uid': '" + contentType + "'}")
+    return ast.literal_eval(dString) # Converting the string back to a dictionary
+
 
 def replaceAssetFromMapper(d, mapper, msg=''):
     '''
@@ -328,12 +313,57 @@ def replaceAssetFromMapper(d, mapper, msg=''):
         while search:
             for k in keys:
                 if bDict[k] == search[0][0]:
-                    # print('found')
-                    # print(k)
-                    # print(bDict[k])
-                    d = replaceStrInDict(d, bDict[k], value)
+                    d = replaceAssetStrInDict(d, bDict[k], value)
             search.pop(0)
     return d
+
+def replaceEntryReference(entry, exportUid, importUid, updateContentstack=False):
+    '''
+    Replacing old uid with new uid in reference
+    '''
+    bDict = benedict(entry)
+    keys = bDict.keypaths(indexes=True)
+    search = bDict.search(exportUid, in_keys=False, in_values=True, exact=True, case_sensitive=True)
+    if search:
+        config.logging.info('{}UPDATE NEEDED!{}'.format(config.BOLD, config.END))
+        updateContentstack = True
+    while search:
+        for k in keys:
+            if bDict[k] == search[0][0]:
+                entry = replaceReferenceStrInDict(entry, bDict[k], importUid)
+        search.pop(0)
+    return entry, updateContentstack
+
+def updateReferences(contentTypes, mapDict, languages, folder, region, token, apiKey):
+    '''
+    Iterating through all the entries and fixing references.
+    ToDo: I should do this when creating entries (in the first iteration). This was quicker coding for POC.
+    '''
+    config.logging.info('{}Updating entries references with correct uids{}'.format(config.BOLD, config.END))
+    entryFolder = folder + config.folderNames['entries']
+    for contentType in contentTypes:
+        ctFolder = entryFolder + contentType + '/'
+        for language in languages:
+            languageFile = ctFolder + language + '.json'
+            entries = config.readFromJsonFile(languageFile)
+            for entry in entries['entries']:
+                try:
+                    uid = mapDict[entry['uid']]
+                except KeyError:
+                    config.logging.error('{}Unable to update entry - Entry not found in import - From Export: {}{}'.format(config.RED, entry['uid'], config.END))
+                    uid = None
+                    continue
+                if entry['locale'] == language:
+                    updateContentstack = False
+                    for exportUid, importUid in mapDict.items():
+                        entry['uid'] = '' # Just replacing uid to prevent it to be found in the search ref function
+                        entry, updateContentstack = replaceEntryReference(entry, exportUid, importUid, updateContentstack)
+                    if updateContentstack:
+                        update = cma.updateEntry(apiKey, token, entry, region, contentType, language, uid)
+                        if update:
+                            config.logging.info('Updated References - {} {} {}'.format(contentType, language, uid))
+                        else:
+                            config.logging.error('{}Unable to Update Entry - {} {} {}{}'.format(config.RED, contentType, language, importUid, config.END))
 
 def importEntries(contentTypes, languages, folder, region, token, apiKey, assetMapper=None):
     '''
@@ -351,26 +381,21 @@ def importEntries(contentTypes, languages, folder, region, token, apiKey, assetM
                 entries = config.readFromJsonFile(languageFile)
                 for entry in entries['entries']:
                     if (entry['uid'] not in mapDict) and (entry['locale'] == language):
-                        # print('ENTRY BEFORE MAP:')
-                        # print(entry)
-                        # print('----')
                         if assetMapper:
                             entry = replaceAssetFromMapper(entry, assetMapper, 'entry assets')
-                        # print('ENTRY AFTER MAP:')
-                        # print(entry)
                         create = cma.createEntry(apiKey, token, entry, region, contentType, language)
                         if create:
                             config.logging.info('Entry Created - Title: {} - Language: {}'.format(create['entry']['title'], language))
                             mapDict = importStructure.addToMapper(mapDict, entry['uid'], create['entry']['uid'])
                     elif (entry['uid'] in mapDict) and (entry['locale'] == language):
                         if assetMapper:
-                            entry = importStructure.replaceFromMapper(assetMapper, entries, 'entries')
+                            entry = replaceAssetFromMapper(entry, assetMapper, 'entry assets')#importStructure.replaceFromMapper(assetMapper, entries, 'entries')
                         update = cma.updateEntry(apiKey, token, entry, region, contentType, language, mapDict[entry['uid']])
                         if update:
-                            print(update)
                             config.logging.info('Entry Updated - Title: {} - Language: {}'.format(update['entry']['title'], language))
             else:
                 config.logging.info('No entries in language: {}'.format(language))
+    updateReferences(contentTypes, mapDict, languages, folder, region, token, apiKey)
     return importStructure.createMapperFile(apiKey, folder.split('/')[-2], mapDict, 'entries')
 
 

@@ -5,6 +5,7 @@ oskar.eiriksson@contentstack.com
 2020-09-28
 '''
 import os
+from time import sleep
 import requests
 import config
 
@@ -63,7 +64,7 @@ def getUserInfo(authToken, region):
     return None
 
 def logError(endpointName, name, url, res):
-    config.logging.error('{}Failed creating {} (Name: {}){}'.format(config.RED, endpointName, name, config.END))
+    config.logging.error('{}Failed creating/updating {} (Name: {}){}'.format(config.RED, endpointName, name, config.END))
     config.logging.error('{}URL: {}{}'.format(config.RED, url, config.END))
     config.logging.error('{}HTTP Status Code: {}{}'.format(config.RED, res.status_code, config.END))
     config.logging.error('{red}Error Message: {txt}{end}'.format(red=config.RED, txt=res.text, end=config.END))
@@ -125,7 +126,7 @@ def typicalGetIterate(url, apiKey, authToken, dictKey, environment=None):
     config.logging.info('No {} results'.format(dictKey))
     return None
 
-def typicalCreate(apiKey, authToken, body, url, endpointName=''):
+def typicalCreate(apiKey, authToken, body, url, endpointName='', retry=False):
     '''
     Combining identical POST methods into one
     '''
@@ -134,6 +135,10 @@ def typicalCreate(apiKey, authToken, body, url, endpointName=''):
     res = requests.post(url, headers=header, json=body)
     if res.status_code in (200, 201):
         return res.json()
+    elif (res.status_code == 429) and not retry:
+        config.logging.warning('{}We are getting rate limited. Retrying in 2 seconds.{}'.format(config.YELLOW, config.END))
+        sleep(2) # We'll retry once in a second if we're getting rate limited.
+        return typicalCreate(apiKey, authToken, body, url, endpointName, True)
     if 'name' in body[endpointName]:
         name = body[endpointName]['name']
     elif 'title' in body[endpointName]:
@@ -142,7 +147,7 @@ def typicalCreate(apiKey, authToken, body, url, endpointName=''):
         name = 'noName'
     return logError(endpointName, name, url, res)
 
-def typicalUpdate(apiKey, authToken, body, url, endpointName=''):
+def typicalUpdate(apiKey, authToken, body, url, endpointName='', retry=False):
     '''
     Combining identical PUT methods into one
     '''
@@ -151,6 +156,10 @@ def typicalUpdate(apiKey, authToken, body, url, endpointName=''):
     res = requests.put(url, headers=header, json=body)
     if res.status_code in (200, 201):
         return res.json()
+    elif (res.status_code == 429) and not retry:
+        config.logging.warning('{}We are getting rate limited. Retrying in 2 seconds.{}'.format(config.YELLOW, config.END))
+        sleep(2) # We'll retry once in a second if we're getting rate limited.
+        return typicalUpdate(apiKey, authToken, body, url, endpointName, True)
     config.logging.error('{}Failed updating {} - {}{}'.format(config.RED, endpointName, str(res.text), config.END))
     return logError(endpointName, '', url, res) # Empty string was name variable
 
@@ -169,6 +178,14 @@ def getAllEntries(stackInfo, contentType, language, token, environment=None):
     '''
     url = '{region}v3/content_types/{contentType}/entries?locale={language}&include_workflow=true&include_publish_details=true&include_count=true'.format(region=stackInfo['region'], contentType=contentType, language=language)
     return typicalGetIterate(url, stackInfo['apiKey'], token, 'entries', environment)
+
+def getSingleEntry(stackInfo, contentType, language, token, uid, environment=None):
+    '''
+    Get a Single Entry (Content Management API).
+    sample url: https://api.contentstack.io/v3/content_types/{content_type_uid}/entries/{entry_uid}?locale={language_code}&include_workflow=true&include_publish_details=true&include_count=true
+    '''
+    url = '{region}v3/content_types/{contentType}/entries/{uid}?locale={language}&include_workflow=true&include_publish_details=true&include_count=true'.format(region=stackInfo['region'], contentType=contentType, uid=uid, language=language)
+    return typicalGetSimple(url, stackInfo['apiKey'], token)
 
 def getEntryLocales(stackInfo, contentType, uid, token):
     '''
