@@ -389,6 +389,14 @@ def createGlobalField(apiKey, authToken, body, region):
     url = '{}v3/global_fields'.format(region)
     return typicalCreate(apiKey, authToken, body, url, 'global_field')
 
+def updateGlobalField(apiKey, authToken, body, region, globalField):
+    '''
+    Updates a global field
+    sample url: https://api.contentstack.io/v3/global_fields/{global_field_uid}
+    '''
+    url = '{}v3/global_fields/{}'.format(region, globalField)
+    return typicalUpdate(apiKey, authToken, body, url, 'global_field')
+
 def createExtension(apiKey, authToken, body, region):
     '''
     Creates an extension
@@ -404,6 +412,14 @@ def createContentType(apiKey, authToken, body, region):
     '''
     url = '{}v3/content_types'.format(region)
     return typicalCreate(apiKey, authToken, body, url, 'content_type')
+
+def updateContentType(apiKey, authToken, body, region, contentType):
+    '''
+    Updates a content type
+    sample url: https://api.contentstack.io/v3/content_types/{content_type_uid}
+    '''
+    url = '{}v3/content_types/{}'.format(region, contentType)
+    return typicalUpdate(apiKey, authToken, body, url, 'content_type')
 
 def createDeliveryToken(apiKey, authToken, body, region):
     '''
