@@ -177,62 +177,69 @@ def importExtensions(apiKey, authToken, region, folder):
             config.logging.error('{}Unable to read from Extension file {}{}'.format(config.RED, extFile, config.END))
     return createMapperFile(apiKey, folder, mapDict, 'extensions')
 
-def importGlobalFields(apiKey, authToken, region, folder, extensionsMapper):
-    '''
-    Importing global fields
-    '''
-    uidArr = []
-    config.logging.info('{}Importing global fields{}'.format(config.BOLD, config.END))
-    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['globalFields']
-    for gfFile in os.listdir(f):
-        globalField = config.readFromJsonFile(f + gfFile)
-        if globalField:
-            globalField = replaceFromMapper(extensionsMapper, globalField, 'global fields')
-            body = {
-                'global_field': globalField
-            }
-            globalFieldImport = cma.createGlobalField(apiKey, authToken, body, region)
-            if globalFieldImport:
-                config.logging.info('Global Field {} imported'.format(globalField['title']))
-                uidArr.append(globalField['uid'])
-        else:
-            config.logging.error('{}Unable to read from Global Field file {}{}'.format(config.RED, gfFile, config.END))
-    return uidArr
+# def importGlobalFields(apiKey, authToken, region, folder, extensionsMapper):
+#     '''
+#     Importing global fields
+#     '''
+#     uidArr = []
+#     config.logging.info('{}Importing global fields{}'.format(config.BOLD, config.END))
+#     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['globalFields']
+#     for gfFile in os.listdir(f):
+#         globalField = config.readFromJsonFile(f + gfFile)
+#         if globalField:
+#             globalField = replaceFromMapper(extensionsMapper, globalField, 'global fields')
+#             body = {
+#                 'global_field': globalField
+#             }
+#             globalFieldImport = cma.createGlobalField(apiKey, authToken, body, region)
+#             if globalFieldImport:
+#                 config.logging.info('Global Field {} imported'.format(globalField['title']))
+#                 uidArr.append(globalField['uid'])
+#         else:
+#             config.logging.error('{}Unable to read from Global Field file {}{}'.format(config.RED, gfFile, config.END))
+#     return uidArr
 
-def findReferencedContentTypes(ctUid, contentType, importedContentTypes, globalFields):
-    '''
-    Finding out whether the content type has a reference to another
-    content type that has not been imported yet.
-    If we find a reference to a content type that has still not been
-    imported, we queue it up and try to import the next one.
-    Then visit the queued up content types after importing everything possible.
-    '''
-    allRefs = nested_lookup(key='reference_to', document=contentType, wild=True) # finding all reference_to fields, where we see the referenced content type
-    newRefsList = []
-    for ref in allRefs: # find all empty strings and lists within the list
-        if (isinstance(ref, str)) and (len(ref) > 0) and (ref != ctUid) and (ref not in globalFields):
-            newRefsList.append(ref)
-        elif isinstance(ref, list):
-            for i in ref:
-                if (len(i) > 0) and (i != ctUid) and (i not in globalFields):
-                    newRefsList.append(i)
-    newRefsList = list(set(newRefsList)) # remove duplicates
-    config.logging.debug('Content Type: ', ctUid)
-    config.logging.debug('References: ', newRefsList)
-    config.logging.debug('Already Imported: ', importedContentTypes)
-    for i in newRefsList:
-        if i not in importedContentTypes: # We have a reference to a content type that has not been imported yet
-            config.logging.warning('{}Not possible to import {} at this time because one ore more referenced content types have not been imported yet (All referenced content types: {}). Adding to queue.{}'.format(config.YELLOW, ctUid, newRefsList, config.END))
-            return False
-    return True # All references already imported
+# def findReferencedContentTypes(ctUid, contentType, importedContentTypes, globalFields):
+#     '''
+#     Finding out whether the content type has a reference to another
+#     content type that has not been imported yet.
+#     If we find a reference to a content type that has still not been
+#     imported, we queue it up and try to import the next one.
+#     Then visit the queued up content types after importing everything possible.
+#     '''
+#     allRefs = nested_lookup(key='reference_to', document=contentType, wild=True) # finding all reference_to fields, where we see the referenced content type
+#     newRefsList = []
+#     for ref in allRefs: # find all empty strings and lists within the list
+#         if (isinstance(ref, str)) and (len(ref) > 0) and (ref != ctUid) and (ref not in globalFields):
+#             newRefsList.append(ref)
+#         elif isinstance(ref, list):
+#             for i in ref:
+#                 if (len(i) > 0) and (i != ctUid) and (i not in globalFields):
+#                     newRefsList.append(i)
+#     newRefsList = list(set(newRefsList)) # remove duplicates
+#     config.logging.debug('Content Type: ', ctUid)
+#     config.logging.debug('References: ', newRefsList)
+#     config.logging.debug('Already Imported: ', importedContentTypes)
+#     for i in newRefsList:
+#         if i not in importedContentTypes: # We have a reference to a content type that has not been imported yet
+#             config.logging.warning('{}Not possible to import {} at this time because one ore more referenced content types have not been imported yet (All referenced content types: {}). Adding to queue.{}'.format(config.YELLOW, ctUid, newRefsList, config.END))
+#             return False
+#     return True # All references already imported
 
-def performContentTypeImport(apiKey, authToken, body, region):
-    contentTypeImport = cma.createContentType(apiKey, authToken, body, region)
-    if contentTypeImport:
-        config.logging.info('{} imported'.format(body['content_type']['uid']))
-        return True
-    config.logging.warning('{}Unable to import {}. Moving to back of queue and trying again later.{}'.format(config.YELLOW, body['content_type']['uid'], config.END))
-    return False
+# def performContentTypeImport(apiKey, authToken, body, region):
+#     contentTypeImport = cma.createContentType(apiKey, authToken, body, region)
+#     if contentTypeImport:
+#         config.logging.info('{} imported'.format(body['content_type']['uid']))
+#         return True
+#     config.logging.warning('{}Unable to import {}. Moving to back of queue and trying again later.{}'.format(config.YELLOW, body['content_type']['uid'], config.END))
+#     return False
+# def performContentTypeCreate(apiKey, authToken, body, region):
+#     contentTypeImport = cma.createContentType(apiKey, authToken, body, region)
+#     if contentTypeImport:
+#         config.logging.info('{} created'.format(body['content_type']['uid']))
+#         return True
+#     config.logging.critical('{}Unable to create {}.{}'.format(config.RED, body['content_type']['uid'], config.END))
+#     return False
 
 def getNamesInQueue(contentTypeQueue):
     '''
@@ -244,59 +251,59 @@ def getNamesInQueue(contentTypeQueue):
         queueNames.append(i['uid'])
     return queueNames
 
-def importContentTypes(apiKey, authToken, region, folder, extensionsMapper, globalFields):
-    '''
-    Importing content types
-    '''
-    config.logging.info('{}Importing content types{}'.format(config.BOLD, config.END))
-    f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['contentTypes']
-    importedContentTypes = []
-    contentTypeQueue = []
-    for ctFile in os.listdir(f):
-        contentType = config.readFromJsonFile(f + ctFile)
-        if contentType:
-            contentType = replaceFromMapper(extensionsMapper, contentType, 'content types')
-            continueImport = findReferencedContentTypes(contentType['uid'], contentType['schema'], importedContentTypes, globalFields)
-            if continueImport: # OK to continue with import of this content type
-                '''
-                Lets import the content type!
-                '''
-                importAction = performContentTypeImport(apiKey, authToken, {'content_type': contentType}, region)
-                if importAction:
-                    importedContentTypes.append(contentType['uid']) # Add it to this list after import finishes
-                else:
-                    contentTypeQueue.append(contentType)
-            else: # Not OK to continue with import of this content type
-                contentTypeQueue.append(contentType)
-        else:
-            config.logging.error('{}Unable to read from Content Type file {}{}'.format(config.RED, ctFile, config.END))
-
-    maxTries = int(2 * len(contentTypeQueue))# We have to give up on some point - Length of array + 200% of the length of the queue should do it.
-    tryNumber = 1
-    if contentTypeQueue:
-        queueNames = getNamesInQueue(contentTypeQueue)
-        config.logging.info('Trying to import from the content type queue since earlier ({}). Maximum tries: {}'.format(queueNames, maxTries))
-    while contentTypeQueue and tryNumber <= maxTries:
-        '''
-        Lets now attack the unfinshed content types
-        '''
-        config.logging.info('Try: {}/{}. Content Type: {}'.format(tryNumber, maxTries, contentTypeQueue[0]['uid']))
-        body = {'content_type': contentTypeQueue[0]}
-        continueImport = findReferencedContentTypes(contentTypeQueue[0]['uid'], contentTypeQueue[0]['schema'], importedContentTypes, globalFields)
-        importAction = None
-        if continueImport:
-            importAction = performContentTypeImport(apiKey, authToken, body, region)
-        if not importAction:
-            contentTypeQueue.append(contentTypeQueue[0])
-        else:
-            importedContentTypes.append(contentTypeQueue[0]['uid'])
-        contentTypeQueue.pop(0)
-        tryNumber += 1
-    if (tryNumber > maxTries) and contentTypeQueue:
-        queueNames = getNamesInQueue(contentTypeQueue)
-        config.logging.error('{}Not able to import all content types. Possibly a circular dependency in the references?{}'.format(config.RED, config.END))
-        config.logging.error('{}Content Types not imported: {}{}'.format(config.RED, queueNames, config.END))
-    return True
+# def importContentTypes(apiKey, authToken, region, folder, extensionsMapper, globalFields):
+#     '''
+#     Importing content types
+#     '''
+#     config.logging.info('{}Importing content types{}'.format(config.BOLD, config.END))
+#     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['contentTypes']
+#     importedContentTypes = []
+#     contentTypeQueue = []
+#     for ctFile in os.listdir(f):
+#         contentType = config.readFromJsonFile(f + ctFile)
+#         if contentType:
+#             contentType = replaceFromMapper(extensionsMapper, contentType, 'content types')
+#             continueImport = findReferencedContentTypes(contentType['uid'], contentType['schema'], importedContentTypes, globalFields)
+#             if continueImport: # OK to continue with import of this content type
+#                 '''
+#                 Lets import the content type!
+#                 '''
+#                 importAction = performContentTypeImport(apiKey, authToken, {'content_type': contentType}, region)
+#                 if importAction:
+#                     importedContentTypes.append(contentType['uid']) # Add it to this list after import finishes
+#                 else:
+#                     contentTypeQueue.append(contentType)
+#             else: # Not OK to continue with import of this content type
+#                 contentTypeQueue.append(contentType)
+#         else:
+#             config.logging.error('{}Unable to read from Content Type file {}{}'.format(config.RED, ctFile, config.END))
+#
+#     maxTries = int(2 * len(contentTypeQueue))# We have to give up on some point - Length of array + 200% of the length of the queue should do it.
+#     tryNumber = 1
+#     if contentTypeQueue:
+#         queueNames = getNamesInQueue(contentTypeQueue)
+#         config.logging.info('Trying to import from the content type queue since earlier ({}). Maximum tries: {}'.format(queueNames, maxTries))
+#     while contentTypeQueue and tryNumber <= maxTries:
+#         '''
+#         Lets now attack the unfinshed content types
+#         '''
+#         config.logging.info('Try: {}/{}. Content Type: {}'.format(tryNumber, maxTries, contentTypeQueue[0]['uid']))
+#         body = {'content_type': contentTypeQueue[0]}
+#         continueImport = findReferencedContentTypes(contentTypeQueue[0]['uid'], contentTypeQueue[0]['schema'], importedContentTypes, globalFields)
+#         importAction = None
+#         if continueImport:
+#             importAction = performContentTypeImport(apiKey, authToken, body, region)
+#         if not importAction:
+#             contentTypeQueue.append(contentTypeQueue[0])
+#         else:
+#             importedContentTypes.append(contentTypeQueue[0]['uid'])
+#         contentTypeQueue.pop(0)
+#         tryNumber += 1
+#     if (tryNumber > maxTries) and contentTypeQueue:
+#         queueNames = getNamesInQueue(contentTypeQueue)
+#         config.logging.error('{}Not able to import all content types. Possibly a circular dependency in the references?{}'.format(config.RED, config.END))
+#         config.logging.error('{}Content Types not imported: {}{}'.format(config.RED, queueNames, config.END))
+#     return True
 
 def importLabels(apiKey, authToken, region, folder):
     '''
@@ -422,6 +429,84 @@ def importWebhooks(apiKey, authToken, region, folder):
             config.logging.error('{}Unable to read from Webhook file {}{}'.format(config.RED, whfile, config.END))
     return True
 
+def createContentTypesAndGlobalFields(apiKey, token, region, folder, extensionMapper):
+    '''
+    v2 - Create empty ones before updating them again. Able to avoid issues with circular dependencies
+    '''
+    config.logging.info('{}Creating Content Types{}'.format(config.BOLD, config.END))
+    ctFolder = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['contentTypes']
+    for ctFile in os.listdir(ctFolder):
+        contentType = config.readFromJsonFile(ctFolder + ctFile)
+        if contentType:
+            # contentType = replaceFromMapper(extensionMapper, contentType, 'content types')
+            body = {
+                'content_type': {
+                    'title': contentType['title'],
+                    'uid': contentType['uid'],
+                }
+            }
+            schema = []
+            for field in contentType['schema']:
+                if field['uid'] in ('url', 'title'):
+                    schema.append(field)
+            body['content_type']['schema'] = schema
+            ctCreate = cma.createContentType(apiKey, token, body, region)
+            if ctCreate:
+                config.logging.info('Content Type {} created'.format(contentType['title']))
+            else:
+                config.logging.critical('{}Content Type {} NOT created!{}'.format(config.RED, contentType['title'], config.END))
+    config.logging.info('{}Finished creating all Content Types{}'.format(config.BOLD, config.END))
+    config.logging.info('{}Creating Global Fields{}'.format(config.BOLD, config.END))
+    gfFolder = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['globalFields']
+    for gfFile in os.listdir(gfFolder):
+        globalField = config.readFromJsonFile(gfFolder + gfFile)
+        if globalField:
+            body = {
+                'global_field': {
+                    'title': globalField['title'],
+                    'uid': globalField['uid'],
+                    'schema': [{"data_type": "text", "display_name": "temp field", "uid": "temp_field",}]
+                }
+            }
+            gfCreate = cma.createGlobalField(apiKey, token, body, region)
+            if gfCreate:
+                config.logging.info('Global Field {} created'.format(globalField['title']))
+            else:
+                config.logging.critical('{}Global Field {} NOT created!{}'.format(config.RED, globalField['title'], config.END))
+    config.logging.info('{}Finished creating all Global Fields{}'.format(config.BOLD, config.END))
+    '''
+    Now need to update content types and global field with correct schema
+    '''
+    config.logging.info('{}Updating Content Types with correct schema{}'.format(config.BOLD, config.END))
+    for ctFile in os.listdir(ctFolder):
+        contentType = config.readFromJsonFile(ctFolder + ctFile)
+        if contentType:
+            contentType = replaceFromMapper(extensionMapper, contentType, 'content types')
+            body = {'content_type': contentType}
+            ctUpdate = cma.updateContentType(apiKey, token, body, region, contentType['uid'])
+            if ctUpdate:
+                config.logging.info('Content Type {} updated'.format(contentType['title']))
+            else:
+                config.logging.critical('{}Content Type {} NOT updated!{}'.format(config.RED, contentType['title'], config.END))
+    config.logging.info('{}Finished updating Content Types{}'.format(config.BOLD, config.END))
+    config.logging.info('{}Updating Global Fields with correct schema{}'.format(config.BOLD, config.END))
+    for gfFile in os.listdir(gfFolder):
+        globalField = config.readFromJsonFile(gfFolder + gfFile)
+        if globalField:
+            globalField = replaceFromMapper(extensionMapper, globalField, 'global fields')
+            body = {'global_field': globalField}
+            gfUpdate = cma.updateGlobalField(apiKey, token, body, region, globalField['uid'])
+            if gfUpdate:
+                config.logging.info('Global Field {} updated'.format(globalField['title']))
+            else:
+                config.logging.critical('{}Global Field {} NOT updated!{}'.format(config.RED, globalField['title'], config.END))
+    config.logging.info('{}Finished updating Global Fields{}'.format(config.BOLD, config.END))
+
+
+
+
+
+
 def importStack(importedStack, token, region, folder):
     '''
     Import stack function
@@ -437,8 +522,9 @@ def importStack(importedStack, token, region, folder):
     extensionMapper = importExtensions(apiKey, token, region, folder) # Need to map extension uids from export to import
     if not extensionMapper:
         config.logging.info('{}No Extensionmapper present. Were there any extensions in the export?{}'.format(config.YELLOW, config.END))
-    globalFields = importGlobalFields(apiKey, token, region, folder, extensionMapper)
-    importContentTypes(apiKey, token, region, folder, extensionMapper, globalFields) # Using global fields to differentiate them from other references
+    createContentTypesAndGlobalFields(apiKey, token, region, folder, extensionMapper)
+    # globalFields = importGlobalFields(apiKey, token, region, folder, extensionMapper)
+    # importContentTypes(apiKey, token, region, folder, extensionMapper, globalFields) # Using global fields to differentiate them from other references
     importLabels(apiKey, token, region, folder)
     roleMapper = importRoles(apiKey, token, region, folder) # Need to map role uids from export to import
     if not roleMapper:

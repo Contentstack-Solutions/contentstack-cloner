@@ -5,7 +5,7 @@ oskar.eiriksson@contentstack.com
 Imports stack content from chosen local folder.
 '''
 import os
-from time import sleep
+from time import sleep, time
 import re
 import ast
 from benedict import benedict
@@ -345,25 +345,26 @@ def updateReferences(contentTypes, mapDict, languages, folder, region, token, ap
         ctFolder = entryFolder + contentType + '/'
         for language in languages:
             languageFile = ctFolder + language + '.json'
-            entries = config.readFromJsonFile(languageFile)
-            for entry in entries['entries']:
-                try:
-                    uid = mapDict[entry['uid']]
-                except KeyError:
-                    config.logging.error('{}Unable to update entry - Entry not found in import - From Export: {}{}'.format(config.RED, entry['uid'], config.END))
-                    uid = None
-                    continue
-                if entry['locale'] == language:
-                    updateContentstack = False
-                    for exportUid, importUid in mapDict.items():
-                        entry['uid'] = '' # Just replacing uid to prevent it to be found in the search ref function
-                        entry, updateContentstack = replaceEntryReference(entry, exportUid, importUid, updateContentstack)
-                    if updateContentstack:
-                        update = cma.updateEntry(apiKey, token, entry, region, contentType, language, uid)
-                        if update:
-                            config.logging.info('Updated References - {} {} {}'.format(contentType, language, uid))
-                        else:
-                            config.logging.error('{}Unable to Update Entry - {} {} {}{}'.format(config.RED, contentType, language, importUid, config.END))
+            if os.path.isfile(languageFile):
+                entries = config.readFromJsonFile(languageFile)
+                for entry in entries['entries']:
+                    try:
+                        uid = mapDict[entry['uid']]
+                    except KeyError:
+                        config.logging.error('{}Unable to update entry - Entry not found in import - From Export: {}{}'.format(config.RED, entry['uid'], config.END))
+                        uid = None
+                        continue
+                    if entry['locale'] == language:
+                        updateContentstack = False
+                        for exportUid, importUid in mapDict.items():
+                            entry['uid'] = '' # Just replacing uid to prevent it to be found in the search ref function
+                            entry, updateContentstack = replaceEntryReference(entry, exportUid, importUid, updateContentstack)
+                        if updateContentstack:
+                            update = cma.updateEntry(apiKey, token, entry, region, contentType, language, uid)
+                            if update:
+                                config.logging.info('Updated References - {} {} {}'.format(contentType, language, uid))
+                            else:
+                                config.logging.error('{}Unable to Update Entry - {} {} {}{}'.format(config.RED, contentType, language, uid, config.END))
 
 def importEntries(contentTypes, languages, folder, region, token, apiKey, assetMapper=None):
     '''
@@ -420,6 +421,7 @@ def whatToImport(token, folder, importedStack, exportReport, region):
     '''
     Define what to Import
     '''
+    startTime = time()
     apiKey = importedStack['uid']
     assetEnvironments, localAssets, assetNumbers, contentTypes, languages = printOutReport(exportReport)
     if importedStack['masterLocale'] != exportReport['stackStructureExportInfo']['stack']['masterLocale']:
@@ -428,7 +430,7 @@ def whatToImport(token, folder, importedStack, exportReport, region):
     if not importAll:
         config.logging.info('Canceling')
         return None
-    elif importAll == 'HANDPICK':
+    if importAll == 'HANDPICK':
         # Import Handpicked stuff
         # assetImports = defineAssetsToImport(assetEnvironments, localAssets, assetNumbers) # It will just import all Assets.
         contentTypeImports = defineContentTypesToImport(contentTypes) # Returns a list of content types to be imported.
@@ -448,4 +450,7 @@ def whatToImport(token, folder, importedStack, exportReport, region):
         if assetMapper:
             config.logging.info('{}Assets Import Finished{}'.format(config.BOLD, config.END))
         languages = sortLanguages(languages, importedStack['masterLocale'])
-        entries = importEntries(contentTypes, languages, folder, region, token, apiKey, assetMapper)
+        importEntries(contentTypes, languages, folder, region, token, apiKey, assetMapper)
+    endTime = time()
+    totalTime = endTime - startTime
+    config.logging.info('{}Import Content finished in {} seconds{}'.format(config.BOLD, totalTime, config.END))
