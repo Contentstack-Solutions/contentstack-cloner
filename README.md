@@ -1,4 +1,5 @@
-# Export Import Contenstack Using Python
+# Contentstack Cloner using Python
+Export and/or Import Stack structure and/or all or a subset of entries and assets.
 *Work in progress*
 
 ## Prerequisites:
