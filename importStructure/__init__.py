@@ -241,15 +241,15 @@ def importExtensions(apiKey, authToken, region, folder):
 #     config.logging.critical('{}Unable to create {}.{}'.format(config.RED, body['content_type']['uid'], config.END))
 #     return False
 
-def getNamesInQueue(contentTypeQueue):
-    '''
-    A simple function used a few times over.
-    Getting only the uids of content types from the whole payload
-    '''
-    queueNames = []
-    for i in contentTypeQueue:
-        queueNames.append(i['uid'])
-    return queueNames
+# def getNamesInQueue(contentTypeQueue):
+#     '''
+#     A simple function used a few times over.
+#     Getting only the uids of content types from the whole payload
+#     '''
+#     queueNames = []
+#     for i in contentTypeQueue:
+#         queueNames.append(i['uid'])
+#     return queueNames
 
 # def importContentTypes(apiKey, authToken, region, folder, extensionsMapper, globalFields):
 #     '''
@@ -483,6 +483,8 @@ def createContentTypesAndGlobalFields(apiKey, token, region, folder, extensionMa
         if contentType:
             contentType = replaceFromMapper(extensionMapper, contentType, 'content types')
             body = {'content_type': contentType}
+            # cma.deleteContentType(apiKey, token, region, contentType['uid'])
+            # ctUpdate = cma.createContentType(apiKey, token, body, region)
             ctUpdate = cma.updateContentType(apiKey, token, body, region, contentType['uid'])
             if ctUpdate:
                 config.logging.info('Content Type {} updated'.format(contentType['title']))
@@ -495,6 +497,8 @@ def createContentTypesAndGlobalFields(apiKey, token, region, folder, extensionMa
         if globalField:
             globalField = replaceFromMapper(extensionMapper, globalField, 'global fields')
             body = {'global_field': globalField}
+            # cma.deleteGlobalField(apiKey, token, region, globalField['uid'])
+            # gfUpdate = cma.createGlobalField(apiKey, token, body, region)
             gfUpdate = cma.updateGlobalField(apiKey, token, body, region, globalField['uid'])
             if gfUpdate:
                 config.logging.info('Global Field {} updated'.format(globalField['title']))
@@ -531,7 +535,7 @@ def importStack(importedStack, token, region, folder):
         config.logging.info('{}No Rolemapper present. Were there any custom roles in the export?{}'.format(config.YELLOW, config.END))
     workflowMapper = importWorkflows(apiKey, token, region, folder, roleMapper) # Need to map workflow uids from export to import
     if not workflowMapper:
-        config.logging.info('{}No Workflowmapper present. Were there any worlflows in the export?{}'.format(config.YELLOW, config.END))
+        config.logging.info('{}No Workflowmapper present. Were there any workflows in the export?{}'.format(config.YELLOW, config.END))
     mappers = {
         'environments': environmentMapper,
         'workflows': workflowMapper,

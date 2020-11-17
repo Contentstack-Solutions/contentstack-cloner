@@ -163,6 +163,22 @@ def typicalUpdate(apiKey, authToken, body, url, endpointName='', retry=False):
     config.logging.error('{}Failed updating {} - {}{}'.format(config.RED, endpointName, str(res.text), config.END))
     return logError(endpointName, '', url, res) # Empty string was name variable
 
+def typicalDelete(apiKey, authToken, url, endpointName='', retry=False):
+    '''
+    Combining identical DELETE methods into one
+    '''
+    logUrl(url)
+    header = constructAuthTokenHeader(authToken, apiKey)
+    res = requests.delete(url, headers=header)
+    if res.status_code in (200, 201):
+        return res.json()
+    elif (res.status_code == 429) and not retry:
+        config.logging.warning('{}We are getting rate limited. Retrying in 2 seconds.{}'.format(config.YELLOW, config.END))
+        sleep(2) # We'll retry once in a second if we're getting rate limited.
+        return typicalDelete(apiKey, authToken, url, endpointName, True)
+    config.logging.error('{}Failed deleting {} - {}{}'.format(config.RED, endpointName, str(res.text), config.END))
+    return logError(endpointName, '', url, res) # Empty string was name variable
+
 def getAllContentTypes(apiKey, token, region):
     '''
     Gets all content types, includes the count of content types and global field schema
@@ -397,6 +413,14 @@ def updateGlobalField(apiKey, authToken, body, region, globalField):
     url = '{}v3/global_fields/{}'.format(region, globalField)
     return typicalUpdate(apiKey, authToken, body, url, 'global_field')
 
+def deleteGlobalField(apiKey, authToken, region, globalField):
+    '''
+    Deletes a global field
+    sample url: https://api.contentstack.io/v3/global_fields/{global_field_uid}?force=true
+    '''
+    url = '{}v3/global_fields/{}?force=true'.format(region, globalField)
+    return typicalDelete(apiKey, authToken, url, 'global_field')
+
 def createExtension(apiKey, authToken, body, region):
     '''
     Creates an extension
@@ -420,6 +444,15 @@ def updateContentType(apiKey, authToken, body, region, contentType):
     '''
     url = '{}v3/content_types/{}'.format(region, contentType)
     return typicalUpdate(apiKey, authToken, body, url, 'content_type')
+
+def deleteContentType(apiKey, authToken, region, contentType):
+    '''
+    Deletes a content type
+    sample url: https://api.contentstack.io/v3/content_types/{content_type_uid}?force={boolean value}
+    '''
+    url = '{}v3/content_types/{}?force=true'.format(region, contentType)
+    return typicalDelete(apiKey, authToken, url, 'content_type')
+
 
 def createDeliveryToken(apiKey, authToken, body, region):
     '''

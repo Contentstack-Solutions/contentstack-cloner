@@ -334,7 +334,24 @@ def replaceEntryReference(entry, exportUid, importUid, updateContentstack=False)
         search.pop(0)
     return entry, updateContentstack
 
-def updateReferences(contentTypes, mapDict, languages, folder, region, token, apiKey):
+def fixAssetReferences(entry, assetMapper):
+    '''
+    replace asset fields with only their uid
+    '''
+    bDict = benedict(entry)
+    keys = bDict.keypaths(indexes=True)
+    search = bDict.search('content_type', in_keys=True, in_values=False, exact=True, case_sensitive=True)
+    for found in search:
+        for key in keys:
+            if found[0] == bDict[key]:
+                if ('uid' in bDict[key]) and ('file_size' in bDict[key]) and ('filename' in bDict[key]) and ('created_at' in bDict[key]):
+                    uid = assetMapper[bDict[key + '.uid']]
+                    bDict[key] = uid
+                    break
+    entry = dict(bDict)
+    return entry
+
+def updateReferences(contentTypes, mapDict, languages, folder, region, token, apiKey, assetMapper):
     '''
     Iterating through all the entries and fixing references.
     ToDo: I should do this when creating entries (in the first iteration). This was quicker coding for POC.
@@ -360,6 +377,7 @@ def updateReferences(contentTypes, mapDict, languages, folder, region, token, ap
                             entry['uid'] = '' # Just replacing uid to prevent it to be found in the search ref function
                             entry, updateContentstack = replaceEntryReference(entry, exportUid, importUid, updateContentstack)
                         if updateContentstack:
+                            entry = fixAssetReferences(entry, assetMapper)
                             update = cma.updateEntry(apiKey, token, entry, region, contentType, language, uid)
                             if update:
                                 config.logging.info('Updated References - {} {} {}'.format(contentType, language, uid))
@@ -396,7 +414,7 @@ def importEntries(contentTypes, languages, folder, region, token, apiKey, assetM
                             config.logging.info('Entry Updated - Title: {} - Language: {}'.format(update['entry']['title'], language))
             else:
                 config.logging.info('No entries in language: {}'.format(language))
-    updateReferences(contentTypes, mapDict, languages, folder, region, token, apiKey)
+    updateReferences(contentTypes, mapDict, languages, folder, region, token, apiKey, assetMapper)
     return importStructure.createMapperFile(apiKey, folder.split('/')[-2], mapDict, 'entries')
 
 
