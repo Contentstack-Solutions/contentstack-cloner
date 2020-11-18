@@ -305,7 +305,7 @@ def replaceAssetFromMapper(d, mapper, msg=''):
     '''
     Using benedict to replace old asset uids with new
     '''
-    config.logging.info('Running Asset Mapper on {} export'.format(msg))
+    config.logging.debug('Running Asset Mapper on {} export'.format(msg))
     bDict = benedict(d)
     keys = bDict.keypaths(indexes=True)
     for key, value in mapper.items():
@@ -325,7 +325,7 @@ def replaceEntryReference(entry, exportUid, importUid, updateContentstack=False)
     keys = bDict.keypaths(indexes=True)
     search = bDict.search(exportUid, in_keys=False, in_values=True, exact=True, case_sensitive=True)
     if search:
-        config.logging.info('{}UPDATE NEEDED!{}'.format(config.BOLD, config.END))
+        config.logging.debug('{}UPDATE NEEDED!{}'.format(config.BOLD, config.END))
         updateContentstack = True
     while search:
         for k in keys:
@@ -411,9 +411,9 @@ def importEntries(contentTypes, languages, folder, region, token, apiKey, assetM
                             entry = replaceAssetFromMapper(entry, assetMapper, 'entry assets')#importStructure.replaceFromMapper(assetMapper, entries, 'entries')
                         update = cma.updateEntry(apiKey, token, entry, region, contentType, language, mapDict[entry['uid']])
                         if update:
-                            config.logging.info('Entry Updated - Title: {} - Language: {}'.format(update['entry']['title'], language))
+                            config.logging.debug('Entry Updated - Title: {} - Language: {}'.format(update['entry']['title'], language))
             else:
-                config.logging.info('No entries in language: {}'.format(language))
+                config.logging.debug('No entries in language: {}'.format(language))
     updateReferences(contentTypes, mapDict, languages, folder, region, token, apiKey, assetMapper)
     return importStructure.createMapperFile(apiKey, folder.split('/')[-2], mapDict, 'entries')
 
