@@ -94,7 +94,7 @@ def initiateLogin(region, retrying=False):
         else:
             config.logging.critical('{}Login ERROR! - Username: {} - Region: {} Status Code: {}{}'.format(config.GREEN, loginInfo['username'], loginInfo['region'], statusCode, config.END))
             return None
-        sessionToFile = {loginInfo['region']: { 'username': loginInfo['username'], 'authtoken': userSession['user']['authtoken']}}
+        sessionToFile = {loginInfo['region']: {'username': loginInfo['username'], 'authtoken': userSession['user']['authtoken']}}
         session = {'username': loginInfo['username'], 'authtoken': userSession['user']['authtoken'], 'region': loginInfo['region']}
         if statusCode == 200 and loginInfo['store']:
             config.addToJsonFile(sessionToFile, config.authTokenFile)
@@ -105,15 +105,16 @@ def startup(count=1):
     Starting up the application - authenticating the user
     '''
     region = chooseRegion()
+
     userInfo = initiateLogin(region)
     if not userInfo:
         config.logging.critical('Not able to login. Try again')
         exitProgram()
-    token = userInfo['authtoken']
-    liveUserInfo = cma.getUserInfo(token, cma.regionMap[region])
-    if count == 3:
-        return None
+    liveUserInfo = cma.getUserInfo(userInfo['authtoken'], cma.regionMap[region])
+    print('here')
     if not liveUserInfo:
+        userInfo = initiateLogin(region, count)
+    while not liveUserInfo and count < 3:
+        liveUserInfo = cma.getUserInfo(userInfo['authtoken'], cma.regionMap[region])
         count += 1
-        initiateLogin(count)
-    return cma.regionMap[region], userInfo, liveUserInfo, token
+    return cma.regionMap[region], userInfo, liveUserInfo, userInfo['authtoken']
