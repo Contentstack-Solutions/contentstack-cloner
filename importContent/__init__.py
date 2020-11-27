@@ -439,7 +439,7 @@ def whatToImport(token, folder, importedStack, exportReport, region):
     '''
     Define what to Import
     '''
-    startTime = time()
+    startTime = time() # Bug - Startime is measured from before user answers questions - if he takes his time, the endtime is scewed.
     apiKey = importedStack['uid']
     assetEnvironments, localAssets, assetNumbers, contentTypes, languages = printOutReport(exportReport)
     if importedStack['masterLocale'] != exportReport['stackStructureExportInfo']['stack']['masterLocale']:
