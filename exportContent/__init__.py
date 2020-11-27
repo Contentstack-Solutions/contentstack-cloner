@@ -213,7 +213,8 @@ def whatContentToExport(info):
     entriesToExport = defineEntriesToExport(info)
     languagesToExport = defineLanguagesToExport(info)
     contentTypesToExport = defineContentTypesToExport(info)
-    assetsToExport = defineAssetsToExport(entriesToExport)
+    assetsToExport = 'all' # Temporary hardcoded to all - Ron wants all. The other is too many options
+    # assetsToExport = defineAssetsToExport(entriesToExport)
     downloadAssets = False
     if assetsToExport:
         downloadAssets = defineAssetDownload()
