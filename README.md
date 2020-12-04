@@ -2,6 +2,9 @@
 Export and/or Import Stack structure and/or all or a subset of entries and assets.
 *Work in progress*
 
+**Not officially supported by Contentstack**
+
+
 ## Prerequisites:
 * Contentstack Account.
 * Install Python 3 (Developed using Python 3.7.6 on Macbook).
