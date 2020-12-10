@@ -4,6 +4,7 @@ Export and/or Import Stack structure and/or all or a subset of entries and asset
 
 **Not officially supported by Contentstack**
 
+Please use the issue tracker here for any questions, ideas, issues or comments.
 
 ## Prerequisites:
 * Contentstack Account.
@@ -30,4 +31,4 @@ Export and/or Import Stack structure and/or all or a subset of entries and asset
 * Refactor.
 * Make an application, e.g. https://realpython.com/python-application-layouts/
 * Make it possible to import Demo stacks from Github (Lower Priority).
-* Any ideas: Contact Ron or Oskar.
+* Any ideas: Submit an issue. Pull Requests also welcomed.
