@@ -1,4 +1,5 @@
 tests/
+log/
 .DS_Store
 testEntryWithAssets/
 .tmp/

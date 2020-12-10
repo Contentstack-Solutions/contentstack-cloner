@@ -13,6 +13,23 @@ import inquirer
 import requests
 import cma
 
+def checkDir(folder):
+    '''
+    Checks if folder exists
+    '''
+    if not os.path.exists(folder):
+        logging.info('Creating folder: ' + folder)
+        os.makedirs(folder)
+        return True
+    return False
+
+def getTime():
+    now = datetime.now()
+    return now.strftime("%d-%m-%Y-%H-%M-%S")
+
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
 dataRootFolder = 'data/' # Relative path to the export root folder - Remember the slash at the end if you change this.
 stackRootFolder = 'stacks/' # Relative path under the dataRootFolder for stack exports
 mapperFolder = 'importJobs_UidMappers/' # The folder where mappers-jobs folders are stored - under the stackRootFolder
@@ -20,8 +37,22 @@ mapperFolder = 'importJobs_UidMappers/' # The folder where mappers-jobs folders 
 authTokenFile = 'authtoken.json'
 exportReportFile = 'report.json' # Placed in the stack export root folder
 logLevel = logging.INFO # Possible levels e.g.: DEBUG, ERROR, INFO
-logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', level=logLevel)
+logFolder = 'log/'
+logFile = getTime()
+checkDir(logFolder)
+# logging.basicConfig(filename=logFile, filemode='a', format='%(asctime)s:%(levelname)s:%(message)s', level=logLevel)
 
+logFormatter = logging.Formatter('%(asctime)s:%(levelname)s:%(message)s')
+logging.basicConfig(level=logLevel)
+rootLogger = logging.getLogger()
+
+fileHandler = logging.FileHandler("{0}/{1}.log".format(logFolder, logFile))
+fileHandler.setFormatter(logFormatter)
+rootLogger.addHandler(fileHandler)
+
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(logFormatter)
+rootLogger.addHandler(consoleHandler)
 
 '''
 Possibly replacing the regionMap variables with this one
@@ -91,21 +122,11 @@ REDBG = '\033[0;41m'
 GREENBG = '\033[0;42m'
 END = '\033[0m'
 
-def checkDir(folder):
-    '''
-    Checks if folder exists
-    '''
-    if not os.path.exists(folder):
-        logging.info('Creating folder: ' + folder)
-        os.makedirs(folder)
-        return True
-    return False
-
 def createFolder(name):
     '''
     Creates an export folder with name
     '''
-    cont = [inquirer.Text('folderName', message="{}Give the export folder a name:{}".format(BOLD, END), default=name + ' - ' + str(datetime.now()))]
+    cont = [inquirer.Text('folderName', message="{}Give the export folder a name:{}".format(BOLD, END), default=name + ' - ' + getTime())]
     folderName = inquirer.prompt(cont)['folderName'] + '/'
     return folderName
 

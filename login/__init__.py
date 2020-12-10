@@ -19,7 +19,7 @@ def chooseRegion():
     }
     chooseRegion = [
         inquirer.List('chosenRegion',
-                      message="{}Choose Region:{}".format(config.BOLD, config.END),
+                      message="{}Choose Region{}".format(config.BOLD, config.END),
                       choices=['North America', 'Europe'],
                       ),
     ]
