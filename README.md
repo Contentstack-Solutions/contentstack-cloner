@@ -17,13 +17,17 @@ Please use the issue tracker here for any questions, ideas, issues or comments.
 
 ## How to use:
 * Run `python app.py` and answer questions that you get asked.
-* If in trouble: Contact Oskar.
+* If in trouble: [Open an issue](https://github.com/Contentstack-Solutions/contentstack-python-cloner/issues/new/choose)
 * Exported content goes to a folder called `data/stacks` (variables in config module).
 
 ## Current Limitations:
 * Content Revision's are not exported/imported. Only newest versions, or what is currently published is exported.
 * Because only a single version of entries and assets is exported it is not possible to publish separate versions when imported (Like is possible between environments).
-* Something else? Contact Oskar.
+* Older versioned stacks are not imported correctly at the moment.
+    * Token names are unique in newer stacks, not older ones.
+    * Workflow export issue.
+    * References of older version are not imported correctly and return an error.
+
 
 ## ToDo:
 * Add Automatic Unit Testing and Mocking.
@@ -31,4 +35,4 @@ Please use the issue tracker here for any questions, ideas, issues or comments.
 * Refactor.
 * Make an application, e.g. https://realpython.com/python-application-layouts/
 * Make it possible to import Demo stacks from Github (Lower Priority).
-* Any ideas: Submit an issue. Pull Requests also welcomed.
+* Any ideas: [Submit an issue](https://github.com/Contentstack-Solutions/contentstack-python-cloner/issues/new/choose). Pull Requests also welcomed.
