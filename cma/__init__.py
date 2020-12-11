@@ -85,6 +85,9 @@ def typicalGetSimple(url, apiKey, authToken, environment=None):
     if res.status_code in (200, 201):
         config.logging.debug('Result: {}'.format(res.json()))
         return res.json()
+    if res.status_code == 412:
+        config.logging.info('{yellow}412 reponse from Contentstack. Possibly not part of your plan. (URL: {url}){end}'.format(yellow=config.YELLOW, url=url, end=config.END))
+        return None
     config.logging.error('{red}Export failed.{end}'.format(red=config.RED, end=config.END))
     config.logging.error('{}URL: {}{}'.format(config.RED, url, config.END))
     config.logging.error('{}HTTP Status Code: {}{}'.format(config.RED, res.status_code, config.END))
@@ -115,6 +118,9 @@ def typicalGetIterate(url, apiKey, authToken, dictKey, environment=None):
             result = result + res.json()[dictKey]
             config.logging.debug('{}Result as of Now: {} {}'.format(config.YELLOW, result, config.END))
             skip += 100
+        elif res.status_code == 412:
+            config.logging.info('{yellow}412 reponse from Contentstack. Possibly not part of your plan. (URL: {url}){end}'.format(yellow=config.YELLOW, url=url, end=config.END))
+            return None
         else:
             config.logging.error('{red}All {key} Export: Failed getting {key}{end}'.format(red=config.RED, key=dictKey, end=config.END))
             config.logging.error('{}URL: {}{}'.format(config.RED, url, config.END))
@@ -255,7 +261,7 @@ def getAllWorkflows(apiKey, token, region):
     Limitation: Using simple get without iteration because it sometimes fails using the iterate one where there are no workflows. I do not know why.
     '''
     url = '{region}v3/workflows?include_count=true'.format(region=region)
-    typicalGetSimple(url, apiKey, token)
+    return typicalGetSimple(url, apiKey, token)
     # return typicalGetIterate(url, apiKey, token, 'workflows')
 
 def getAllPublishingRules(contentTypeUids, apiKey, token, region):

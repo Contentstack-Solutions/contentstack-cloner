@@ -55,7 +55,7 @@ def exportContentTypes(apiKey, token, region, folder):
     contentTypesExport = cma.getAllContentTypes(apiKey, token, region)
     if contentTypesExport:
         return writeExport(contentTypesExport['content_types'], folderPath, 'uid')
-    config.logging.warning('{}Missing content type response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing content type response from Contentstack. Do you have content types in that stack?{}'.format(config.YELLOW, config.END))
     return False
 
 def getContentTypeUids(folder):
@@ -77,7 +77,7 @@ def exportGlobalFields(apiKey, token, region, folder):
     globalFieldsExport = cma.getAllGlobalFields(apiKey, token, region)
     if globalFieldsExport:
         return writeExport(globalFieldsExport['global_fields'], folderPath, 'uid')
-    config.logging.warning('{}Missing global field response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing global field response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportExtensions(apiKey, token, region, folder):
@@ -89,7 +89,7 @@ def exportExtensions(apiKey, token, region, folder):
     extensionsExport = cma.getAllExtensions(apiKey, token, region)
     if extensionsExport:
         return writeExport(extensionsExport['extensions'], folderPath, 'title')
-    config.logging.warning('{}Missing extensions response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing extensions response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportWorkflows(apiKey, token, region, folder):
@@ -101,7 +101,7 @@ def exportWorkflows(apiKey, token, region, folder):
     workflowsExport = cma.getAllWorkflows(apiKey, token, region)
     if workflowsExport:
         return writeExport(workflowsExport['workflows'], folderPath, 'name')
-    config.logging.warning('{}Missing workflow response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing workflow response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportPublishingRules(contentTypeUids, apiKey, token, region, folder):
@@ -113,7 +113,7 @@ def exportPublishingRules(contentTypeUids, apiKey, token, region, folder):
     publishingRulesExport = cma.getAllPublishingRules(contentTypeUids, apiKey, token, region)
     if publishingRulesExport:
         return writeExport(publishingRulesExport['publishing_rules'], folderPath, 'uid')
-    config.logging.warning('{}Missing publishing rule response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing publishing rule response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportLabels(apiKey, token, region, folder):
@@ -125,7 +125,7 @@ def exportLabels(apiKey, token, region, folder):
     labelsExport = cma.getAllLabels(apiKey, token, region)
     if labelsExport:
         return writeExport(labelsExport['labels'], folderPath, 'name')
-    config.logging.warning('{}Missing label response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing label response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportLanguages(apiKey, token, region, folder):
@@ -137,7 +137,7 @@ def exportLanguages(apiKey, token, region, folder):
     languagesExport = cma.getAllLanguages(apiKey, token, region)
     if languagesExport:
         return writeExport(languagesExport['locales'], folderPath, 'code')
-    config.logging.warning('{}Missing language response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing language response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportEnvironments(apiKey, token, region, folder):
@@ -149,7 +149,7 @@ def exportEnvironments(apiKey, token, region, folder):
     environmentsExport = cma.getAllEnvironments(apiKey, token, region)
     if environmentsExport:
         return writeExport(environmentsExport['environments'], folderPath, 'name')
-    config.logging.warning('{}Missing environment response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing environment response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportDeliveryTokens(apiKey, token, region, folder):
@@ -161,7 +161,7 @@ def exportDeliveryTokens(apiKey, token, region, folder):
     deliveryTokensExport = cma.getAllDeliveryTokens(apiKey, token, region)
     if deliveryTokensExport:
         return writeExport(deliveryTokensExport['tokens'], folderPath, 'name')
-    config.logging.warning('{}Missing delivery token response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing delivery token response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportRoles(apiKey, token, region, folder):
@@ -173,7 +173,7 @@ def exportRoles(apiKey, token, region, folder):
     rolesExport = cma.getAllRoles(apiKey, token, region)
     if rolesExport:
         return writeExport(rolesExport['roles'], folderPath, 'name')
-    config.logging.warning('{}Missing role response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing role response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportWebhooks(apiKey, token, region, folder):
@@ -185,7 +185,7 @@ def exportWebhooks(apiKey, token, region, folder):
     webhooksExport = cma.getAllWebhooks(apiKey, token, region)
     if webhooksExport:
         return writeExport(webhooksExport['webhooks'], folderPath, 'name')
-    config.logging.warning('{}Missing webhook response from Contentstack.{}'.format(config.YELLOW, config.END))
+    config.logging.info('{}Missing webhook response from Contentstack.{}'.format(config.YELLOW, config.END))
     return False
 
 def exportStack(apiKey, token, region, folder):
