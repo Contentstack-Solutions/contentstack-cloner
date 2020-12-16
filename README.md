@@ -20,6 +20,10 @@ Please use the issue tracker here for any questions, ideas, issues or comments.
 * If in trouble: [Open an issue](https://github.com/Contentstack-Solutions/contentstack-python-cloner/issues/new/choose)
 * Exported content goes to a folder called `data/stacks` (variables in config module).
 
+## Notes:
+* By default enabled webhooks are disabled on import, minimizing the risk of triggering to production environments.
+    * See the `disableWebhooks` variable in the config module if you want to change that.
+
 ## Current Limitations:
 * Content Revision's are not exported/imported. Only newest versions, or what is currently published is exported.
 * Because only a single version of entries and assets is exported it is not possible to publish separate versions when imported (Like is possible between environments).

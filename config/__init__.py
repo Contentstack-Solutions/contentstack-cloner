@@ -30,6 +30,7 @@ def getTime():
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
+disableWebhooks = False # All enabled webhooks are disabled on import if TRUE. Minimizing the risk of triggering webhooks and messing with live environments.
 dataRootFolder = 'data/' # Relative path to the export root folder - Remember the slash at the end if you change this.
 stackRootFolder = 'stacks/' # Relative path under the dataRootFolder for stack exports
 mapperFolder = 'importJobs_UidMappers/' # The folder where mappers-jobs folders are stored - under the stackRootFolder

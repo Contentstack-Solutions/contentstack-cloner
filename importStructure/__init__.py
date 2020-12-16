@@ -294,9 +294,15 @@ def importWebhooks(apiKey, authToken, region, folder):
     Importing publishing rules
     '''
     config.logging.info('{}Importing webhooks{}'.format(config.BOLD, config.END))
+    if config.disableWebhooks:
+        config.logging.info('{}All Enabled Webhooks will be disabled on import{}'.format(config.BOLD, config.END))
+    else:
+        config.logging.info('{}Webhooks will be enabled on import. Please make sure they do not trigger on live environments{}'.format(config.YELLOW, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['webhooks']
     for whfile in os.listdir(f):
         webhook = config.readFromJsonFile(f + whfile)
+        if config.disableWebhooks:
+            webhook['disabled'] = True
         webhookImport = cma.createWebhook(apiKey, authToken, {'webhook': webhook}, region)
         if webhookImport:
             config.logging.info('Webhook {} imported'.format(webhook['name']))
