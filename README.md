@@ -31,6 +31,9 @@ Please use the issue tracker here for any questions, ideas, issues or comments.
     * Token names are unique in newer stacks, not older ones.
     * Workflow export issue.
     * References of older version are not imported correctly and return an error.
+* Known bugs:
+    * Environment Export with Delivery Token does not work as of now.
+    * Webhooks with identical names issue. Only exports a single webhook in that case.
 
 
 ## ToDo:
