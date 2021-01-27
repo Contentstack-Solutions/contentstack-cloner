@@ -13,9 +13,17 @@ import inquirer
 import requests
 import cma
 
+def readDirIfExists(folder):
+    '''
+    Checks if folder exists, Returns empty array if not
+    '''
+    if os.path.isdir(folder):
+        return os.listdir(folder)
+    return []
+
 def checkDir(folder):
     '''
-    Checks if folder exists
+    Checks if folder exists - Creates one if not
     '''
     if not os.path.exists(folder):
         logging.info('Creating folder: ' + folder)
@@ -224,14 +232,14 @@ def downloadFileToDisk(url, folder, fileName):
 
 def countFilesInFolder(folder):
     count = 0
-    for path in os.listdir(folder):
+    for path in readDirIfExists(folder):
         if os.path.isfile(os.path.join(folder, path)):
             count += 1
     return count
 
 def countFoldersInFolder(folder):
     count = 0
-    for path in os.listdir(folder):
+    for path in readDirIfExists(folder):
         if os.path.isdir(os.path.join(folder, path)):
             count += 1
     return count
@@ -257,10 +265,10 @@ def structureReport(folder):
         d['Number of Asset Folders Exported'] = None
     d['Number of Content types with Exported Entries'] = countFoldersInFolder(folder + folderNames['entries'])
     d['Number of Entries Per Content Type and Language'] = {}
-    for contentType in os.listdir(folder + folderNames['entries']):
+    for contentType in readDirIfExists(folder + folderNames['entries']):
         d['Number of Entries Per Content Type and Language'][contentType] = {}
         ctFolder = folder + folderNames['entries'] + contentType + '/'
-        for f in os.listdir(ctFolder):
+        for f in readDirIfExists(ctFolder):
             lang = f.replace('.json', '')
             r = readFromJsonFile(ctFolder + f)
             d['Number of Entries Per Content Type and Language'][contentType][lang] = len(r['entries'])

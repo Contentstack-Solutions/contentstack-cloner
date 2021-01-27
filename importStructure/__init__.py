@@ -89,7 +89,7 @@ def importLanguages(apiKey, authToken, region, folder, masterLocale):
     '''
     config.logging.info('{}Importing languages{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['languages']
-    for langFile in os.listdir(f):
+    for langFile in config.readDirIfExists(f):
         language = config.readFromJsonFile(f + langFile)
         if language:
             languageImport = None
@@ -115,7 +115,7 @@ def importEnvironments(apiKey, authToken, region, folder):
     config.logging.info('{}Importing environments{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['environments']
     mapDict = {}
-    for envFile in os.listdir(f):
+    for envFile in config.readDirIfExists(f):
         environment = config.readFromJsonFile(f + envFile)
         if environment:
             body = {
@@ -135,7 +135,7 @@ def importDeliveryTokens(apiKey, authToken, region, folder):
     '''
     config.logging.info('{}Importing delivery tokens{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['deliveryTokens']
-    for delFile in os.listdir(f):
+    for delFile in config.readDirIfExists(f):
         deliveryToken = config.readFromJsonFile(f + delFile)
         if deliveryToken:
             body = {
@@ -163,7 +163,7 @@ def importExtensions(apiKey, authToken, region, folder):
     config.logging.info('{}Importing extensions{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['extensions']
     mapDict = {}
-    for extFile in os.listdir(f):
+    for extFile in config.readDirIfExists(f):
         extension = config.readFromJsonFile(f + extFile)
         if extension:
             body = {
@@ -186,7 +186,7 @@ def importLabels(apiKey, authToken, region, folder):
     '''
     config.logging.info('{}Importing labels{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['labels']
-    for labFile in os.listdir(f):
+    for labFile in config.readDirIfExists(f):
         label = config.readFromJsonFile(f + labFile)
         if label:
             labelImport = cma.createLabel(apiKey, authToken, {'label': label}, region)
@@ -217,7 +217,7 @@ def importRoles(apiKey, authToken, region, folder):
                 roleUids['Content Manager'] = role['uid']
 
     mapDict = {}
-    for roleFile in os.listdir(f):
+    for roleFile in config.readDirIfExists(f):
         role = config.readFromJsonFile(f + roleFile)
         if role:
             if role['name'] in ['Developer', 'Content Manager']: # Built in roles - Maybe they've been updated in the export and we need to alter them in the import stack
@@ -259,7 +259,7 @@ def importWorkflows(apiKey, authToken, region, folder, roleMapper):
     config.logging.info('{}Importing workflows{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['workflows']
     mapDict = {}
-    for wfFile in os.listdir(f):
+    for wfFile in config.readDirIfExists(f):
         workflow = config.readFromJsonFile(f + wfFile)
         if workflow:
             workflowImport = cma.createWorkflow(apiKey, authToken, {'workflow': workflow}, region)
@@ -277,7 +277,7 @@ def importPublishingRules(apiKey, authToken, region, folder, mappers):
     config.logging.info('{}Importing publishing rules{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['publishingRules']
     count = 1
-    for pubFile in os.listdir(f):
+    for pubFile in config.readDirIfExists(f):
         publishingRule = config.readFromJsonFile(f + pubFile)
         for key, value in mappers.items():
             publishingRule = replaceFromMapper(value, publishingRule, key) # role uids from old and new stack mapped
@@ -299,7 +299,7 @@ def importWebhooks(apiKey, authToken, region, folder):
     else:
         config.logging.info('{}Webhooks will be enabled on import. Please make sure they do not trigger on live environments{}'.format(config.YELLOW, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['webhooks']
-    for whfile in os.listdir(f):
+    for whfile in config.readDirIfExists(f):
         webhook = config.readFromJsonFile(f + whfile)
         if config.disableWebhooks:
             webhook['disabled'] = True
@@ -316,7 +316,8 @@ def createContentTypesAndGlobalFields(apiKey, token, region, folder):
     '''
     config.logging.info('{}Creating Content Types{}'.format(config.BOLD, config.END))
     ctFolder = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['contentTypes']
-    for ctFile in os.listdir(ctFolder):
+    for ctFile in config.readDirIfExists(ctFolder):
+        config.logging.info('Creating content type from file: {}'.format(ctFile))
         contentType = config.readFromJsonFile(ctFolder + ctFile)
         if contentType:
             # contentType = replaceFromMapper(extensionMapper, contentType, 'content types')
@@ -339,7 +340,7 @@ def createContentTypesAndGlobalFields(apiKey, token, region, folder):
     config.logging.info('{}Finished creating all Content Types{}'.format(config.BOLD, config.END))
     config.logging.info('{}Creating Global Fields{}'.format(config.BOLD, config.END))
     gfFolder = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['globalFields']
-    for gfFile in os.listdir(gfFolder):
+    for gfFile in config.readDirIfExists(gfFolder):
         globalField = config.readFromJsonFile(gfFolder + gfFile)
         if globalField:
             body = {
@@ -362,7 +363,7 @@ def updateContentTypesAndGlobalFields(apiKey, token, region, folder, extensionMa
     '''
     config.logging.info('{}Updating Content Types with correct schema{}'.format(config.BOLD, config.END))
     ctFolder = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['contentTypes']
-    for ctFile in os.listdir(ctFolder):
+    for ctFile in config.readDirIfExists(ctFolder):
         contentType = config.readFromJsonFile(ctFolder + ctFile)
         if contentType:
             contentType = replaceFromMapper(extensionMapper, contentType, 'content types')
@@ -377,7 +378,7 @@ def updateContentTypesAndGlobalFields(apiKey, token, region, folder, extensionMa
     config.logging.info('{}Finished updating Content Types{}'.format(config.BOLD, config.END))
     config.logging.info('{}Updating Global Fields with correct schema{}'.format(config.BOLD, config.END))
     gfFolder = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['globalFields']
-    for gfFile in os.listdir(gfFolder):
+    for gfFile in config.readDirIfExists(gfFolder):
         globalField = config.readFromJsonFile(gfFolder + gfFile)
         if globalField:
             globalField = replaceFromMapper(extensionMapper, globalField, 'global fields')
