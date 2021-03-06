@@ -343,11 +343,14 @@ def fixAssetReferences(entry, assetMapper):
     search = bDict.search('content_type', in_keys=True, in_values=False, exact=True, case_sensitive=True)
     for found in search:
         for key in keys:
-            if found[0] == bDict[key]:
-                if ('uid' in bDict[key]) and ('file_size' in bDict[key]) and ('filename' in bDict[key]) and ('created_at' in bDict[key]):
-                    uid = assetMapper[bDict[key + '.uid']]
-                    bDict[key] = uid
-                    break
+            try:
+                if found[0] == bDict[key]:
+                    if ('uid' in bDict[key]) and ('file_size' in bDict[key]) and ('filename' in bDict[key]) and ('created_at' in bDict[key]):
+                        uid = assetMapper[bDict[key + '.uid']]
+                        bDict[key] = uid
+                        break
+            except KeyError:
+                pass
     entry = dict(bDict)
     return entry
 
