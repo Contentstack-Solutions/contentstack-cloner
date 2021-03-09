@@ -180,21 +180,60 @@ def importExtensions(apiKey, authToken, region, folder):
             config.logging.error('{}Unable to read from Extension file {}{}'.format(config.RED, extFile, config.END))
     return createMapperFile(apiKey, folder, mapDict, 'extensions')
 
+def importLabel(mapDict, apiKey, authToken, label, region):
+    '''
+    Reused below in importLabels
+    '''
+    labelImport = cma.createLabel(apiKey, authToken, {'label': label}, region)
+    if labelImport:
+        config.logging.info('Label {} imported'.format(label['name']))
+        mapDict = addToMapper(mapDict, label['uid'], labelImport['label']['uid'])
+    return mapDict
+
 def importLabels(apiKey, authToken, region, folder):
     '''
     Importing labels
     '''
     config.logging.info('{}Importing labels{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['labels']
+    delayedList = []
+    mapDict = {}
     for labFile in config.readDirIfExists(f):
         label = config.readFromJsonFile(f + labFile)
         if label:
-            labelImport = cma.createLabel(apiKey, authToken, {'label': label}, region)
-            if labelImport:
-                config.logging.info('Label {} imported'.format(label['name']))
+            if label['parent']:
+                delayedList.append(label)
+            else:
+                mapDict = importLabel(mapDict, apiKey, authToken, label, region)
         else:
             config.logging.error('{}Unable to read from Label file {}{}'.format(config.RED, labFile, config.END))
-    return True
+    counter = 1
+    while delayedList and counter <= len(delayedList) * 5: # If we need to try this too often, we stop after len*5 times
+        label = delayedList[0]
+        try:
+            newParents = []
+            for parent in label['parent']:
+                newParents.append(mapDict[parent])
+            label['parent'] = newParents
+            mapDict = importLabel(mapDict, apiKey, authToken, label, region)
+        except KeyError:
+            config.logging.debug('Unable to find parent label for {}'.format(label['name']))
+            delayedList.append(label)
+        delayedList.pop(0)
+        counter += 1
+    
+    # If some labels are still in that list, we just import them without the hierarchy
+    if delayedList:
+        config.logging.warning('{}Unable to import all labels with correct parents. Importing them in the top level.{}'.format(config.YELLOW, config.END))
+        labelStr = ''
+        for label in delayedList:
+            label['parent'] = []
+            labelStr = labelStr + ', ' + label['name']
+            mapDict = importLabel(mapDict, apiKey, authToken, label, region)
+
+        config.logging.warning('{}Labels imported without parents: {}{}'.format(config.YELLOW, labelStr, config.END))
+
+    return createMapperFile(apiKey, folder, mapDict, 'labels')
 
 def importRoles(apiKey, authToken, region, folder):
     '''
