@@ -83,29 +83,72 @@ def createNewStack(authToken, orgUid, region):
     config.logging.error('{}Exiting. Stack {} not created.{}'.format(config.RED, stackName, config.END))
     return None
 
+def importLanguage(language, apiKey, authToken, region):
+    '''
+    Reused function in function below
+    '''
+    body = {
+        'locale': {
+            'code': language['code'],
+            'fallback_locale': language['fallback_locale'],
+            'name': language['name']
+            }
+        }
+    languageImport = cma.createLanguage(apiKey, authToken, body, region)
+    if languageImport:
+        config.logging.info('Language {} imported'.format(language['code']))
+        return True
+        
+    return False
+
 def importLanguages(apiKey, authToken, region, folder, masterLocale):
     '''
     Imports languages
     '''
     config.logging.info('{}Importing languages{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['languages']
+    createdLanguages = [masterLocale]
+    delayedList = []
     for langFile in config.readDirIfExists(f):
         language = config.readFromJsonFile(f + langFile)
         if language:
-            languageImport = None
-            if masterLocale != language['code']:
-                body = {
-                    'locale': {
-                        'code': language['code'],
-                        'fallback_locale': language['fallback_locale'],
-                        'name': language['name']
-                        }
-                    }
-                languageImport = cma.createLanguage(apiKey, authToken, body, region)
-                if languageImport:
-                    config.logging.info('Language {} imported'.format(language['code']))
+            if language['code'] != masterLocale:
+                if language['fallback_locale'] not in createdLanguages:# and language['code'] != masterLocale:
+                    config.logging.info('Fallback Locale {} not yet created for locale {}. Delaying import.'.format(language['fallback_locale'], language['code']))
+                    delayedList.append(language)
+                else:
+                    importedLangue = importLanguage(language, apiKey, authToken, region)
+                    if importedLangue:
+                        createdLanguages.append(language['code'])
+                    else:
+                        delayedList.append(language)
         else:
             config.logging.error('{}Unable to read from Language file {}{}'.format(config.RED, langFile, config.END))
+    counter = 1
+    while delayedList and counter <= len(delayedList) * 5: # If we need to try this too often, we stop after len*5 times
+        language = delayedList[0]
+        config.logging.info('Retrying to import locale skipped earlier: {}.'.format(language['code']))
+        if language['fallback_locale'] in createdLanguages:
+            importedLangue = importLanguage(language, apiKey, authToken, region)
+            if importedLangue:
+                createdLanguages.append(language['code'])
+            else:
+                delayedList.append(language)
+        else:
+            delayedList.append(language)
+        delayedList.pop(0)
+        counter += 1
+
+    # if we still have some languages unimported still, we just add them with the master locale as the fallback
+    if delayedList:
+        config.logging.warning('{}Unable to import languages with correct fallback locale defined: Importing with master locale as fallback: {}{}'.format(config.YELLOW, str(delayedList, config.END)))
+        for language in delayedList:
+            language['fallback_locale'] = masterLocale
+            importedLanguage = importLanguage(language, apiKey, authToken, region)
+            if importedLanguage:
+                createdLanguages.append(language['code'])
+            else:
+                delayedList.append(language)
     return True
 
 def importEnvironments(apiKey, authToken, region, folder):
