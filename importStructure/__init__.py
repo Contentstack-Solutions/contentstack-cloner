@@ -10,7 +10,6 @@ import os
 from time import sleep, time
 import ast
 import inquirer
-from nested_lookup import nested_lookup
 import cma
 import config
 

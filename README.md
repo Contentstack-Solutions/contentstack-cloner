@@ -11,7 +11,6 @@ Please use the issue tracker here for any questions, ideas, issues or comments.
 * Install Python 3 (Developed using Python 3.7.6 on Macbook).
 * Install Python packages:
   * `pip install requests`
-  * `pip install nested-lookup`
   * `pip install inquirer`
   * `pip install python-benedict`
 
