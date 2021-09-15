@@ -287,7 +287,6 @@ def replaceRoleRuleUids(rules, languageMapper, environmentMapper):
     Limitation: Only works for environments and locales (plus other non blt* modules). Entries and assets haven't been imported yet.
     '''
     newRules = []
-    print('JERERERE')
     for rule in rules:
         if rule['module'] == 'locale':
             locales = []
@@ -306,9 +305,6 @@ def replaceRoleRuleUids(rules, languageMapper, environmentMapper):
                     pass
             rule['environments'] = environments
         newRules.append(rule)
-    print('---')
-    print(newRules)
-    print('---')
     return newRules
 
 
