@@ -26,6 +26,8 @@ Please use the issue tracker here for any questions, ideas, issues or comments.
 ## Current Limitations:
 * Content Revision's are not exported/imported. Only newest versions, or what is currently published is exported.
 * Because only a single version of entries and assets is exported it is not possible to publish separate versions when imported (Like is possible between environments).
+* Roles do not map to specific entries or assets on import, since role import happens before entries or assets are imported.
+* System Roles (Admin, Content Manager, Developer) are not modified on import.
 * Older versioned stacks are not imported correctly at the moment.
     * Token names are unique in newer stacks, not older ones.
     * Workflow export issue.

@@ -96,7 +96,7 @@ def importLanguage(language, apiKey, authToken, region):
     languageImport = cma.createLanguage(apiKey, authToken, body, region)
     if languageImport:
         config.logging.info('Language {} imported'.format(language['code']))
-        return True
+        return {language['uid']: languageImport['locale']['uid']}
         
     return False
 
@@ -108,6 +108,7 @@ def importLanguages(apiKey, authToken, region, folder, masterLocale):
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['languages']
     createdLanguages = [masterLocale]
     delayedList = []
+    mapDict = {}
     for langFile in config.readDirIfExists(f):
         language = config.readFromJsonFile(f + langFile)
         if language:
@@ -116,9 +117,10 @@ def importLanguages(apiKey, authToken, region, folder, masterLocale):
                     config.logging.info('Fallback Locale {} not yet created for locale {}. Delaying import.'.format(language['fallback_locale'], language['code']))
                     delayedList.append(language)
                 else:
-                    importedLangue = importLanguage(language, apiKey, authToken, region)
-                    if importedLangue:
+                    importedLanguage = importLanguage(language, apiKey, authToken, region)
+                    if importedLanguage:
                         createdLanguages.append(language['code'])
+                        mapDict.update(importedLanguage)
                     else:
                         delayedList.append(language)
         else:
@@ -128,9 +130,10 @@ def importLanguages(apiKey, authToken, region, folder, masterLocale):
         language = delayedList[0]
         config.logging.info('Retrying to import locale skipped earlier: {}.'.format(language['code']))
         if language['fallback_locale'] in createdLanguages:
-            importedLangue = importLanguage(language, apiKey, authToken, region)
-            if importedLangue:
+            importedLanguage = importLanguage(language, apiKey, authToken, region)
+            if importedLanguage:
                 createdLanguages.append(language['code'])
+                mapDict.update(importedLanguage)
             else:
                 delayedList.append(language)
         else:
@@ -146,9 +149,10 @@ def importLanguages(apiKey, authToken, region, folder, masterLocale):
             importedLanguage = importLanguage(language, apiKey, authToken, region)
             if importedLanguage:
                 createdLanguages.append(language['code'])
+                mapDict.update(importedLanguage)
             else:
                 delayedList.append(language)
-    return True
+    return createMapperFile(apiKey, folder, mapDict, 'languages')
 
 def importEnvironments(apiKey, authToken, region, folder):
     '''
@@ -277,60 +281,78 @@ def importLabels(apiKey, authToken, region, folder):
 
     return createMapperFile(apiKey, folder, mapDict, 'labels')
 
-def importRoles(apiKey, authToken, region, folder):
+def replaceRoleRuleUids(rules, languageMapper, environmentMapper):
+    '''
+    Replacing environment and locale uids with new ones
+    Limitation: Only works for environments and locales (plus other non blt* modules). Entries and assets haven't been imported yet.
+    '''
+    newRules = []
+    print('JERERERE')
+    for rule in rules:
+        if rule['module'] == 'locale':
+            locales = []
+            for locale in rule['locales']:
+                try:
+                    locales.append(languageMapper[locale])
+                except KeyError:
+                    pass
+            rule['locales'] = locales
+        elif rule['module'] == 'environment':
+            environments = []
+            for environment in rule['environments']:
+                try:
+                    environments.append(environmentMapper[environment])
+                except KeyError:
+                    pass
+            rule['environments'] = environments
+        newRules.append(rule)
+    print('---')
+    print(newRules)
+    print('---')
+    return newRules
+
+
+def importRoles(apiKey, authToken, region, folder, languageMapper, environmentMapper):
     '''
     Importing roles
     '''
     config.logging.info('{}Importing roles{}'.format(config.BOLD, config.END))
     f = config.dataRootFolder + config.stackRootFolder + folder + config.folderNames['roles']
 
-    # Getting current roles in import stack - Just to get the uid's of the buit in roles
-    currentRoles = cma.getAllRoles(apiKey, authToken, region)
-    roleUids = {
-        'Developer': None,
-        'Content Manager': None
-    }
-    if currentRoles: # Getting the uids for built-in roles to be able to update them
-        for role in currentRoles['roles']:
-            if role['name'] == 'Developer':
-                roleUids['Developer'] = role['uid']
-            elif role['name'] == 'Content Manager':
-                roleUids['Content Manager'] = role['uid']
+    # # Getting current roles in import stack - Just to get the uid's of the buit in roles
+    # currentRoles = cma.getAllRoles(apiKey, authToken, region)
+    # roleUids = {
+    #     'Developer': None,
+    #     'Content Manager': None
+    # }
+    # if currentRoles: # Getting the uids for built-in roles to be able to update them
+    #     for role in currentRoles['roles']:
+    #         if role['name'] == 'Developer':
+    #             roleUids['Developer'] = role['uid']
+    #         elif role['name'] == 'Content Manager':
+    #             roleUids['Content Manager'] = role['uid']
 
     mapDict = {}
     for roleFile in config.readDirIfExists(f):
-        role = config.readFromJsonFile(f + roleFile)
-        if role:
-            if role['name'] in ['Developer', 'Content Manager']: # Built in roles - Maybe they've been updated in the export and we need to alter them in the import stack
-                newRules = []
-                for rule in role['rules']:
-                    newRule = {}
-                    for key, value in rule.items():
-                        newRule[key] = value
-                    if 'acl' not in newRule: # If this is missing from the role, we need to believe they're allowed to do anything, because the update fails otherwise.
-                        newRule['acl'] = {
-                            "create": True,
-                            "read": True,
-                            "update": True,
-                            "delete": True,
-                            "publish": True
-                            }
-                    role['rules'] = newRules
-                roleImport = cma.updateRole(apiKey, authToken, {'role': role}, region, roleUids)
-            elif role['name'] == 'Admin':
-                # Built in role and not possible to update. We'll pass on this one
-                roleImport = None
-            else:
-                # Custom roles here. We'll create those
+        if roleFile not in ('Admin.json', 'Content Manager.json', 'Developer.json'): # Skipping update in built-in roles - Because it's buggy
+            role = config.readFromJsonFile(f + roleFile)
+            if role:
+                del role['permissions']
+                if 'rules' in role:
+                    rules = replaceRoleRuleUids(role['rules'], languageMapper, environmentMapper)
+                else:
+                    rules = []
                 roleImport = cma.createRole(apiKey, authToken, {'role': role}, region)
-            if roleImport:
-                try:
-                    mapDict = addToMapper(mapDict, role['uid'], roleImport['role']['uid'])
-                except KeyError:
-                    config.logging.debug('Not able to map uid for role {}'.format(role['name']))
-                config.logging.info('{} role imported'.format(role['name']))
+                if roleImport:
+                    try:
+                        mapDict = addToMapper(mapDict, role['uid'], roleImport['role']['uid'])
+                    except KeyError:
+                        config.logging.debug('Not able to map uid for role {}'.format(role['name']))
+                    config.logging.info('{} role imported'.format(role['name']))
+            else:
+                config.logging.error('{}Unable to read from Role file {}{}'.format(config.RED, roleFile, config.END))
         else:
-            config.logging.error('{}Unable to read from Role file {}{}'.format(config.RED, roleFile, config.END))
+            config.logging.info('Skipping system role import: {}'.format(roleFile))
     return createMapperFile(apiKey, folder, mapDict, 'roles')
 
 def importWorkflows(apiKey, authToken, region, folder, roleMapper):
@@ -481,7 +503,7 @@ def importStack(importedStack, token, region, folder):
     config.logging.info('{}Starting structure import{}'.format(config.BOLD, config.END))
     startTime = time()
     createContentTypesAndGlobalFields(apiKey, token, region, folder)
-    importLanguages(apiKey, token, region, folder, importedStack['masterLocale'])
+    languageMapper = importLanguages(apiKey, token, region, folder, importedStack['masterLocale'])
     environmentMapper = importEnvironments(apiKey, token, region, folder)
     if not environmentMapper:
         config.logging.info('{}No Environmentsmapper present. Were there any environments in the export?{}'.format(config.YELLOW, config.END))
@@ -492,7 +514,7 @@ def importStack(importedStack, token, region, folder):
     # globalFields = importGlobalFields(apiKey, token, region, folder, extensionMapper)
     # importContentTypes(apiKey, token, region, folder, extensionMapper, globalFields) # Using global fields to differentiate them from other references
     importLabels(apiKey, token, region, folder)
-    roleMapper = importRoles(apiKey, token, region, folder) # Need to map role uids from export to import
+    roleMapper = importRoles(apiKey, token, region, folder, languageMapper, environmentMapper) # Need to map role uids from export to import
     if not roleMapper:
         config.logging.info('{}No Rolemapper present. Were there any custom roles in the export?{}'.format(config.YELLOW, config.END))
     workflowMapper = importWorkflows(apiKey, token, region, folder, roleMapper) # Need to map workflow uids from export to import
