@@ -216,7 +216,7 @@ def importFolders(folder, apiKey, token, region):
         folderData = config.readFromJsonFile(folderFile)
         config.logging.info('Found Folders in Export')
         folderExport = folderData['assets']
-        maxTries = len(folderExport) * 2
+        maxTries = len(folderExport) * 5
         tryNo = 0
         while folderExport and tryNo <= maxTries:
             tryNo += 1
@@ -231,7 +231,9 @@ def importFolders(folder, apiKey, token, region):
                     folderExport.append(folderExport[0])
                     folderExport.pop(0)
                     continue
-            importedFolder = cma.createFolder(apiKey, token, region, folderExport[0]['name'])
+                else:
+                    parentUid = mapDict[parentUid]
+            importedFolder = cma.createFolder(apiKey, token, region, folderExport[0]['name'], parentUid)
             if importedFolder:
                 config.logging.info('Folder Imported: {}'.format(importedFolder['asset']['name']))
                 mapDict = importStructure.addToMapper(mapDict, folderExport[0]['uid'], importedFolder['asset']['uid'])
