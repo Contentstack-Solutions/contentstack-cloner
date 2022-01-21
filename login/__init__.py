@@ -30,6 +30,9 @@ def chooseRegion():
     except TypeError:
         exitProgram()
 
+'''
+Don't think this method is used anymore - Need to confirm
+'''
 def executeLogin(loginInfo, maxTries, count=1):
     '''
     Executes the login versus Contentstack with the login information fetches in the initiateLogin function
@@ -40,6 +43,9 @@ def executeLogin(loginInfo, maxTries, count=1):
             statusCode, loginAttempt = cma.login(loginInfo['username'], loginInfo['password'], loginInfo['region'])
             if statusCode == 200:
                 return loginAttempt, loginInfo['region']
+            # elif statusCode == 294:
+            #     print('STATUS CODE 294')
+            #     exitProgram()
             elif 'error_message' in loginAttempt:
                 config.logging.error(str(config.RED) + str(loginAttempt['error_message']) + str(config.END))
             else:
@@ -58,6 +64,7 @@ def getLoginInfo(region):
         loginList = [
             inquirer.Text('username', message="{}Type in your username (email address){}".format(config.BOLD, config.END), validate=lambda _, x: re.match('[^@]+@[^@]+\.[^@]+', x)),
             inquirer.Password('password', message="{}Type in your password{}".format(config.BOLD, config.END)),
+            inquirer.Password('2fa', message="{}Type in your 2FA token (Leave blank if you do not use 2FA){}".format(config.BOLD, config.END)),
             inquirer.Confirm('store', message='{}Do you want to store the authentication token on the local drive?{}'.format(config.BOLD, config.END), default=True)
         ]
         loginInfo = inquirer.prompt(loginList)
@@ -102,7 +109,7 @@ def initiateLogin(region, retrying=False):
         else:
             loginInfo = getLoginInfo(region)
         if loginInfo or loginToNewRegion:
-            statusCode, userSession = cma.login(loginInfo['username'], loginInfo['password'], cma.regionMap[loginInfo['region']])
+            statusCode, userSession = cma.login(loginInfo['username'], loginInfo['password'], loginInfo['2fa'], cma.regionMap[loginInfo['region']])
             if statusCode == 200:
                 config.logging.info('{}Login Successful - Username: {} - Region: {}{}'.format(config.GREEN, loginInfo['username'], loginInfo['region'], config.END))
             else:
@@ -128,7 +135,6 @@ def startup(count=1):
             config.logging.critical('Not able to login. Try again')
             exitProgram()
         liveUserInfo = cma.getUserInfo(userInfo['authtoken'], cma.regionMap[region])
-        print('here')
         if not liveUserInfo:
             userInfo = initiateLogin(region, count)
         while not liveUserInfo and count < 3:

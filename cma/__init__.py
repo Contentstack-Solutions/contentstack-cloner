@@ -16,7 +16,7 @@ regionMap = {
     'eu': 'https://eu-api.contentstack.com/'
 }
 
-def login(username, password, region):
+def login(username, password, mfa, region):
     url = '{region}v3/user-session'.format(region=region)
     body = {
         'user': {
@@ -24,6 +24,8 @@ def login(username, password, region):
             'password': password,
             }
         }
+    if mfa:
+        body['user']['tfa_token'] = mfa
     res = requests.post(url, json=body)
     config.logging.debug(res.json())
     return res.status_code, res.json()
