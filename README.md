@@ -1,3 +1,5 @@
+This project is no longer actively maintained. For current needs, please consider using the Contentstack CLI. While the code here may still be of interest, it is not being updated.
+
 # Contentstack Cloner using Python
 Export and/or Import Stack structure and/or all or a subset of entries and assets.
 *Work in progress*
